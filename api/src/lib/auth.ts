@@ -24,6 +24,9 @@ export async function verifyToken(req: HttpRequest): Promise<string> {
   const token = authHeader.replace('Bearer ', '').trim()
   if (!token) throw new Error('No token')
 
+  const unverified = jwt.decode(token) as any
+  const actualIss = unverified?.iss ?? 'unknown'
+
   return new Promise((resolve, reject) => {
     jwt.verify(
       token,
@@ -35,7 +38,7 @@ export async function verifyToken(req: HttpRequest): Promise<string> {
       },
       (err, decoded: any) => {
         if (err) {
-          return reject(new Error(`Invalid token: ${err.message} | expected issuer: https://${entraTenantName}.ciamlogin.com/${entraTenantName}.onmicrosoft.com/v2.0/`))
+          return reject(new Error(`Invalid token: ${err.message} | actual iss="${actualIss}" | expected iss="https://${entraTenantName}.ciamlogin.com/${entraTenantName}.onmicrosoft.com/v2.0/"`))
         }
 
         const email = decoded.email ?? decoded.preferred_username ?? decoded.emails?.[0] ?? ''
