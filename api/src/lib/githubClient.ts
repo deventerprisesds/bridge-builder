@@ -12,6 +12,24 @@ export function parseRepo(repoUrlOrSlug: string): { owner: string; repo: string 
   return { owner, repo }
 }
 
+/** Get all file paths in a repo (recursive tree) */
+export async function getRepoTree(
+  octokit: Octokit,
+  owner: string,
+  repo: string
+): Promise<string[]> {
+  try {
+    const { data } = await octokit.git.getTree({
+      owner, repo, tree_sha: 'HEAD', recursive: '1'
+    })
+    return data.tree
+      .filter(n => n.type === 'blob' && n.path)
+      .map(n => n.path as string)
+  } catch {
+    return []
+  }
+}
+
 /** Fetch a file from GitHub, returns decoded string or null */
 export async function fetchFile(
   octokit: Octokit,

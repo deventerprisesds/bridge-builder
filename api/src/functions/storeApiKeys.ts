@@ -9,12 +9,13 @@ app.http('storeApiKeys', {
   handler: async (req: HttpRequest, _ctx: InvocationContext): Promise<HttpResponseInit> => {
     try {
       const subjectId = await verifyToken(req)
-      const { openAiKey, githubToken } = await req.json() as {
+      const { openAiKey, githubToken, figmaToken } = await req.json() as {
         openAiKey?: string
         githubToken?: string
+        figmaToken?: string
       }
 
-      const entity: { partitionKey: string; rowKey: string; UpdatedAt: string; OpenAiKeyEncrypted?: string; GithubTokenEncrypted?: string } = {
+      const entity: Record<string, string> = {
         partitionKey: 'keys',
         rowKey: subjectId,
         UpdatedAt: new Date().toISOString()
@@ -22,6 +23,7 @@ app.http('storeApiKeys', {
 
       if (openAiKey)   entity.OpenAiKeyEncrypted   = encrypt(openAiKey)
       if (githubToken) entity.GithubTokenEncrypted = encrypt(githubToken)
+      if (figmaToken)  entity.FigmaTokenEncrypted  = encrypt(figmaToken)
 
       await getTable('BridgeUserKeys').upsertEntity(entity, 'Merge')
 

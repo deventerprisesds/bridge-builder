@@ -12,13 +12,12 @@ export async function getUserKeys(subjectId: string) {
     const client = getTable('BridgeUserKeys')
     const entity = await client.getEntity('keys', subjectId)
     return {
-      openAiKey: entity.OpenAiKeyEncrypted
-        ? decrypt(entity.OpenAiKeyEncrypted as string) : '',
-      githubToken: entity.GithubTokenEncrypted
-        ? decrypt(entity.GithubTokenEncrypted as string) : ''
+      openAiKey:   entity.OpenAiKeyEncrypted   ? decrypt(entity.OpenAiKeyEncrypted as string)   : '',
+      githubToken: entity.GithubTokenEncrypted ? decrypt(entity.GithubTokenEncrypted as string) : '',
+      figmaToken:  entity.FigmaTokenEncrypted  ? decrypt(entity.FigmaTokenEncrypted as string)  : ''
     }
   } catch {
-    return { openAiKey: '', githubToken: '' }
+    return { openAiKey: '', githubToken: '', figmaToken: '' }
   }
 }
 

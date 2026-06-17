@@ -17,10 +17,12 @@ export default function AddApp() {
   const [error, setError]   = useState('')
 
   // Step 1
-  const [url, setUrl]               = useState('')
-  const [githubUrl, setGithubUrl]   = useState('')
-  const [openAiKey, setOpenAiKey]   = useState('')
-  const [githubToken, setGithubToken] = useState('')
+  const [url, setUrl]                   = useState('')
+  const [githubUrl, setGithubUrl]       = useState('')
+  const [openAiKey, setOpenAiKey]       = useState('')
+  const [githubToken, setGithubToken]   = useState('')
+  const [figmaToken, setFigmaToken]     = useState('')
+  const [figmaFileId, setFigmaFileId]   = useState('')
 
   // Step 2/3
   const [scanning, setScanning]     = useState(false)
@@ -35,11 +37,15 @@ export default function AddApp() {
     setError('')
     if (!url) { setError('Please enter a webapp URL to continue.'); return }
     try {
-      if (openAiKey || githubToken)
-        await storeApiKeys({ openAiKey: openAiKey || undefined, githubToken: githubToken || undefined })
+      if (openAiKey || githubToken || figmaToken)
+        await storeApiKeys({
+          openAiKey: openAiKey || undefined,
+          githubToken: githubToken || undefined,
+          figmaToken: figmaToken || undefined
+        })
 
       setStep(2); setScanning(true)
-      const result = await scanWebapp(url, githubUrl || undefined)
+      const result = await scanWebapp(url, githubUrl || undefined, figmaFileId || undefined)
       setScanResult(result)
       setConfig(scanResultToConfig(result, url))
       setScanning(false)
@@ -196,6 +202,39 @@ export default function AddApp() {
                     className="input font-mono"
                     placeholder="ghp_…"
                   />
+                </div>
+              </div>
+            </div>
+
+            <hr className="border-neutral-200" />
+
+            <div>
+              <p className="text-label-md font-medium text-neutral-700 mb-1">Figma Theme
+                <span className="ml-1.5 badge-neutral text-label-xs">optional</span>
+              </p>
+              <p className="form-hint mb-3">
+                Pull brand colours directly from your Figma file instead of scanning the live app.
+              </p>
+              <div className="space-y-3">
+                <div>
+                  <label className="form-label">Figma Personal Access Token</label>
+                  <input
+                    value={figmaToken}
+                    onChange={e => setFigmaToken(e.target.value)}
+                    type="password"
+                    className="input font-mono"
+                    placeholder="figd_…"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Figma File ID</label>
+                  <input
+                    value={figmaFileId}
+                    onChange={e => setFigmaFileId(e.target.value)}
+                    className="input font-mono"
+                    placeholder="e.g. 82LmDt5zsgYIoDQga4mK4R"
+                  />
+                  <p className="form-hint">Found in the Figma file URL: figma.com/design/<strong>FILE_ID</strong>/…</p>
                 </div>
               </div>
             </div>

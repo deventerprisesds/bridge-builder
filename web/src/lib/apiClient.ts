@@ -47,12 +47,12 @@ export const deleteApp = (appId: string) =>
   request<{ deleted: boolean }>('DELETE', `/deleteApp?appId=${appId}`)
 
 // ── Keys ──────────────────────────────────────────────────────────────────────
-export const storeApiKeys = (keys: { openAiKey?: string; githubToken?: string }) =>
+export const storeApiKeys = (keys: { openAiKey?: string; githubToken?: string; figmaToken?: string }) =>
   request<{ stored: boolean }>('POST', '/storeApiKeys', keys)
 
 // ── Scan ──────────────────────────────────────────────────────────────────────
-export const scanWebapp = (url: string, githubRepoUrl?: string) =>
-  request<ScanResult>('POST', '/scanWebapp', { url, githubRepoUrl })
+export const scanWebapp = (url: string, githubRepoUrl?: string, figmaFileId?: string) =>
+  request<ScanResult>('POST', '/scanWebapp', { url, githubRepoUrl, figmaFileId })
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 export const triggerBuild = (appId: string, config: BridgeConfig) =>
