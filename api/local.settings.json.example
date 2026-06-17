@@ -5,11 +5,11 @@
     "FUNCTIONS_WORKER_RUNTIME": "node",
     "AZURE_STORAGE_CONNECTION_STRING": "[from azure-setup-output.txt]",
     "AZURE_KEY_ENCRYPTION_SECRET": "a17a663863111d210a55aa5f315745a03d819c95c123230a49415f4494de5c66",
-    "ENTRA_TENANT_NAME": "enterpriseds",
-    "ENTRA_TENANT_ID": "b9791c7d-dd6c-4190-b1bb-dbbd1996bc2e",
+    "ENTRA_EXTERNAL_TENANT_NAME": "enterpriseds",
+    "ENTRA_EXTERNAL_TENANT_ID": "b9791c7d-dd6c-4190-b1bb-dbbd1996bc2e",
     "ENTRA_CLIENT_ID": "59465948-6e95-4124-984e-a43acade2fa9",
     "ENTRA_CLIENT_SECRET": "nCY8Q~m5xpJOVEVAk1EBqKjGFgwHEhtcbEm_WaeO",
-    "ALLOWED_USER_EMAIL": "Von.Ellis@EnterpriseDS.io",
+    "ALLOWED_USER_EMAIL": "dev@enterpriseds.io",
     "GITHUB_TEMPLATE_REPO": "deventerprisesds/android-bridge-template"
   }
 }

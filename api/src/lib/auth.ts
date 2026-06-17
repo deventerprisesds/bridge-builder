@@ -2,7 +2,8 @@ import { HttpRequest } from '@azure/functions'
 import * as jwt from 'jsonwebtoken'
 import jwksClient from 'jwks-rsa'
 
-const entraTenantName = process.env.ENTRA_TENANT_NAME!
+// Env var is ENTRA_EXTERNAL_TENANT_NAME on the live function app
+const entraTenantName = (process.env.ENTRA_EXTERNAL_TENANT_NAME ?? process.env.ENTRA_TENANT_NAME)!
 const allowedEmail    = process.env.ALLOWED_USER_EMAIL!
 
 // Entra External ID (CIAM) JWKS endpoint
