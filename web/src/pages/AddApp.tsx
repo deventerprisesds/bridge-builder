@@ -21,8 +21,11 @@ export default function AddApp() {
   const [githubUrl, setGithubUrl]       = useState('')
   const [openAiKey, setOpenAiKey]       = useState('')
   const [githubToken, setGithubToken]   = useState('')
-  const [figmaToken, setFigmaToken]     = useState('')
-  const [figmaFileId, setFigmaFileId]   = useState('')
+
+  function fillTestData() {
+    setUrl('https://journey-voice.lovable.app')
+    setGithubUrl('https://github.com/deventerprisesds/journey-voice')
+  }
 
   // Step 2/3
   const [scanning, setScanning]     = useState(false)
@@ -37,15 +40,14 @@ export default function AddApp() {
     setError('')
     if (!url) { setError('Please enter a webapp URL to continue.'); return }
     try {
-      if (openAiKey || githubToken || figmaToken)
+      if (openAiKey || githubToken)
         await storeApiKeys({
           openAiKey: openAiKey || undefined,
           githubToken: githubToken || undefined,
-          figmaToken: figmaToken || undefined
         })
 
       setStep(2); setScanning(true)
-      const result = await scanWebapp(url, githubUrl || undefined, figmaFileId || undefined)
+      const result = await scanWebapp(url, githubUrl || undefined)
       setScanResult(result)
       setConfig(scanResultToConfig(result, url))
       setScanning(false)
@@ -147,6 +149,17 @@ export default function AddApp() {
         {/* ── Step 1: URL + API Keys ──────────────────────────────────── */}
         {step === 1 && (
           <div className="card rounded-lg p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <p className="text-label-sm text-neutral-400">Enter details or use test data to get started quickly.</p>
+              <button
+                type="button"
+                onClick={fillTestData}
+                className="btn-ghost py-1 px-3 text-body-sm text-brand-600 hover:bg-brand-50"
+              >
+                ⚡ Fill test data
+              </button>
+            </div>
+
             <div>
               <label className="form-label">
                 Webapp URL <span className="text-error">*</span>
@@ -202,39 +215,6 @@ export default function AddApp() {
                     className="input font-mono"
                     placeholder="ghp_…"
                   />
-                </div>
-              </div>
-            </div>
-
-            <hr className="border-neutral-200" />
-
-            <div>
-              <p className="text-label-md font-medium text-neutral-700 mb-1">Figma Theme
-                <span className="ml-1.5 badge-neutral text-label-xs">optional</span>
-              </p>
-              <p className="form-hint mb-3">
-                Pull brand colours directly from your Figma file instead of scanning the live app.
-              </p>
-              <div className="space-y-3">
-                <div>
-                  <label className="form-label">Figma Personal Access Token</label>
-                  <input
-                    value={figmaToken}
-                    onChange={e => setFigmaToken(e.target.value)}
-                    type="password"
-                    className="input font-mono"
-                    placeholder="figd_…"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Figma File ID</label>
-                  <input
-                    value={figmaFileId}
-                    onChange={e => setFigmaFileId(e.target.value)}
-                    className="input font-mono"
-                    placeholder="e.g. 82LmDt5zsgYIoDQga4mK4R"
-                  />
-                  <p className="form-hint">Found in the Figma file URL: figma.com/design/<strong>FILE_ID</strong>/…</p>
                 </div>
               </div>
             </div>

@@ -91,12 +91,15 @@ app.http('scanWebapp', {
   handler: async (req: HttpRequest, _ctx: InvocationContext): Promise<HttpResponseInit> => {
     try {
       const subjectId = await verifyToken(req)
-      const { url, githubRepoUrl, figmaFileId } = await req.json() as {
+      const { url, githubRepoUrl } = await req.json() as {
         url: string
         githubRepoUrl?: string
-        figmaFileId?: string
       }
       const keys = await getUserKeys(subjectId)
+
+      // Figma credentials are global env vars — no per-user input required
+      const figmaFileId = process.env.FIGMA_FILE_ID
+      const figmaKey    = process.env.FIGMA_TOKEN
 
       const result: Record<string, any> = { confidence: {} }
 
@@ -138,7 +141,6 @@ app.http('scanWebapp', {
       } catch { /* URL unreachable */ }
 
       // ── Figma theme extraction ────────────────────────────────────────────
-      const figmaKey = keys.figmaToken
       if (figmaFileId && figmaKey) {
         const figma = await fetchFigmaTheme(figmaFileId, figmaKey)
         if (figma) {
