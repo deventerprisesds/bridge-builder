@@ -8,9 +8,9 @@ export function useBuildStatus(appId: string | undefined, jobId?: string) {
     enabled: !!appId,
     refetchInterval: (query) => {
       const data = query.state.data
-      if (!data) return 10_000
+      if (!data) return 5_000
       if (data.Status === 'ready' || data.Status === 'failed') return false
-      return 10_000
+      return 5_000
     }
   })
 }

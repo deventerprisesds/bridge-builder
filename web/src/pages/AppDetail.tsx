@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useApp, useSaveApp, useDeleteApp } from '../hooks/useApps'
 import { useBuildStatus } from '../hooks/useBuildStatus'
@@ -14,6 +14,13 @@ export default function AppDetail() {
   const { data: build, isLoading: buildLoading } = useBuildStatus(appId)
   const { mutateAsync: saveApp }   = useSaveApp()
   const { mutateAsync: deleteApp } = useDeleteApp()
+
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    if (build?.Status !== 'building' && build?.Status !== 'pending') return
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [build?.Status])
 
   const [editing, setEditing]   = useState(false)
   const [building, setBuilding] = useState(false)
@@ -134,10 +141,28 @@ export default function AppDetail() {
                     v{build.ApkVersion}
                   </span>
                 )}
-                {build.StartedAt && (
+                {build.StartedAt && (build.Status === 'building' || build.Status === 'pending') && (() => {
+                  const elapsed = Math.floor((now - new Date(build.StartedAt).getTime()) / 1000)
+                  const m = Math.floor(elapsed / 60), s = elapsed % 60
+                  return (
+                    <span className="text-caption-md text-neutral-500 tabular-nums">
+                      {m > 0 ? `${m}m ` : ''}{s}s elapsed
+                    </span>
+                  )
+                })()}
+                {build.StartedAt && build.Status !== 'building' && build.Status !== 'pending' && (
                   <span className="text-caption-md text-neutral-400">
                     Started {new Date(build.StartedAt).toLocaleString()}
                   </span>
+                )}
+                {build.GithubRunId && (
+                  <a
+                    href={`https://github.com/deventerprisesds/android-bridge-template/actions/runs/${build.GithubRunId}`}
+                    target="_blank" rel="noreferrer"
+                    className="text-caption-md text-brand-600 hover:text-brand-700 hover:underline"
+                  >
+                    View live log →
+                  </a>
                 )}
               </div>
 
