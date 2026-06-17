@@ -39,7 +39,7 @@ export async function getToken(): Promise<string | null> {
   if (accounts.length === 0) return null
   try {
     const result: AuthenticationResult = await msalInstance.acquireTokenSilent({
-      ...loginRequest,
+      scopes: loginRequest.scopes,  // no prompt — prompt is invalid for silent requests
       account: accounts[0]
     })
     return result.idToken
