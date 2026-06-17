@@ -34,28 +34,27 @@ export const loginRequest = {
   prompt: 'select_account'
 }
 
-// Token stored directly from handleRedirectPromise or acquireTokenSilent
-let _cachedIdToken: string | null = null
-
-export function setCachedToken(token: string | null) {
-  _cachedIdToken = token
+// Always use acquireTokenSilent — MSAL handles refresh token rotation automatically.
+// Never cache the raw token string; that bypasses expiry handling.
+export function setCachedToken(_token: string | null) {
+  // no-op: kept for call-site compatibility in main.tsx
 }
 
 export async function getToken(): Promise<string | null> {
-  if (_cachedIdToken) return _cachedIdToken
-
   const accounts = msalInstance.getAllAccounts()
   if (accounts.length === 0) return null
 
   try {
     const result: AuthenticationResult = await msalInstance.acquireTokenSilent({
       scopes: loginRequest.scopes,
-      account: accounts[0]
+      account: accounts[0],
+      forceRefresh: false   // MSAL refreshes automatically when token is near expiry
     })
-    _cachedIdToken = result.idToken
-    return _cachedIdToken
+    return result.idToken
   } catch (e) {
-    console.error('[getToken] acquireTokenSilent failed:', e)
+    console.error('[getToken] acquireTokenSilent failed — redirecting to login:', e)
+    // Refresh token also expired or missing; force re-login
+    await msalInstance.loginRedirect(loginRequest)
     return null
   }
 }
