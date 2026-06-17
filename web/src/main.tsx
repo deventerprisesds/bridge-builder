@@ -11,15 +11,10 @@ const queryClient = new QueryClient({
   }
 })
 
-// MSAL must be initialised before any component that calls auth methods
-msalInstance.initialize().then(() => {
-  // Handle redirect callback — resolves with AuthenticationResult after login redirect returns
-  msalInstance.handleRedirectPromise().then((result) => {
-    if (result?.account) {
-      // Redirect login just completed — go to dashboard
-      window.location.replace('/')
-    }
-  }).catch(console.error)
+// MSAL must be initialised and redirect promise resolved before rendering,
+// so getCurrentUser() is populated when RequireAuth runs on first render
+msalInstance.initialize().then(async () => {
+  await msalInstance.handleRedirectPromise().catch(console.error)
 
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
