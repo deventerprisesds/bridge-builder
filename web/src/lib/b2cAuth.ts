@@ -29,7 +29,8 @@ export const msalConfig: Configuration = {
 export const msalInstance = new PublicClientApplication(msalConfig)
 
 export const loginRequest = {
-  scopes: ['openid', 'profile', 'email']
+  scopes: ['openid', 'profile', 'email'],
+  prompt: 'select_account'
 }
 
 export async function getToken(): Promise<string | null> {
