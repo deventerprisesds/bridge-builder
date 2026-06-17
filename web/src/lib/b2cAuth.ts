@@ -10,10 +10,8 @@ import {
 const tenantName   = import.meta.env.VITE_ENTRA_TENANT_NAME as string
 const tenantDomain = `${tenantName}.onmicrosoft.com`
 const clientId     = import.meta.env.VITE_ENTRA_CLIENT_ID   as string
-const userFlow     = 'SignInSignUp'
-
-// Entra External ID authority URL pattern: ciamlogin.com
-const authority = `https://${tenantName}.ciamlogin.com/${tenantDomain}/${userFlow}`
+// Entra External ID (ciamlogin.com) does not use policy/flow names in the authority URL
+const authority = `https://${tenantName}.ciamlogin.com/${tenantDomain}/`
 
 export const msalConfig: Configuration = {
   auth: {
