@@ -181,16 +181,17 @@ app.http('scanWebapp', {
 
         // Smart file selection: score all files in repo, pick top 15
         const allFiles = await getRepoTree(octokit, owner, repo)
+        // Use ALL scored files — no cap. These are small apps and full coverage
+        // is required to reliably detect notifications, integrations, and voice.
         const scored = allFiles
           .map(path => ({ path, score: scoreFile(path) }))
           .filter(f => f.score > 0)
           .sort((a, b) => b.score - a.score)
-          .slice(0, 25)
           .map(f => f.path)
 
         let sourceContext = ''
         for (const path of scored) {
-          const content = await fetchFile(octokit, owner, repo, path, 4000)
+          const content = await fetchFile(octokit, owner, repo, path, 8000)
           if (content) sourceContext += `\n\n=== ${path} ===\n${content}`
         }
 

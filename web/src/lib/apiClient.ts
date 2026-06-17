@@ -50,6 +50,9 @@ export const deleteApp = (appId: string) =>
 export const storeApiKeys = (keys: { openAiKey?: string; githubToken?: string; figmaToken?: string }) =>
   request<{ stored: boolean }>('POST', '/storeApiKeys', keys)
 
+export const getApiKeyStatus = () =>
+  request<{ hasOpenAiKey: boolean; hasGithubToken: boolean; hasFigmaToken: boolean }>('GET', '/getApiKeyStatus')
+
 // ── Scan ──────────────────────────────────────────────────────────────────────
 export const scanWebapp = (url: string, githubRepoUrl?: string, figmaFileId?: string) =>
   request<ScanResult>('POST', '/scanWebapp', { url, githubRepoUrl, figmaFileId })

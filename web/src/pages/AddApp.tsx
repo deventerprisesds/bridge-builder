@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { scanWebapp, triggerBuild, storeApiKeys, ScanResult, BridgeConfig } from '../lib/apiClient'
+import { scanWebapp, triggerBuild, storeApiKeys, getApiKeyStatus, ScanResult, BridgeConfig } from '../lib/apiClient'
 import { useSaveApp } from '../hooks/useApps'
 import { ScanProgress } from '../components/ScanProgress'
 import { ConfigEditor, scanResultToConfig } from '../components/ConfigEditor'
@@ -21,6 +21,11 @@ export default function AddApp() {
   const [githubUrl, setGithubUrl]       = useState('')
   const [openAiKey, setOpenAiKey]       = useState('')
   const [githubToken, setGithubToken]   = useState('')
+  const [keyStatus, setKeyStatus]       = useState<{ hasOpenAiKey: boolean; hasGithubToken: boolean } | null>(null)
+
+  useEffect(() => {
+    getApiKeyStatus().then(setKeyStatus).catch(() => {})
+  }, [])
 
   function fillTestData() {
     setUrl('https://journey-voice.lovable.app')
@@ -196,26 +201,31 @@ export default function AddApp() {
                 Stored AES-256 encrypted in Azure. Only required once.
               </p>
               <div className="space-y-3">
-                <div>
-                  <label className="form-label">OpenAI API Key</label>
-                  <input
-                    value={openAiKey}
-                    onChange={e => setOpenAiKey(e.target.value)}
-                    type="password"
-                    className="input font-mono"
-                    placeholder="Leave blank — uses key already on file"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">GitHub Token</label>
-                  <input
-                    value={githubToken}
-                    onChange={e => setGithubToken(e.target.value)}
-                    type="password"
-                    className="input font-mono"
-                    placeholder="Leave blank — uses token already on file"
-                  />
-                </div>
+                {[
+                  { label: 'OpenAI API Key', stored: keyStatus?.hasOpenAiKey, value: openAiKey, onChange: setOpenAiKey, placeholder: 'sk-…' },
+                  { label: 'GitHub Token',   stored: keyStatus?.hasGithubToken, value: githubToken, onChange: setGithubToken, placeholder: 'ghp_…' },
+                ].map(({ label, stored, value, onChange, placeholder }) => (
+                  <div key={label}>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="form-label mb-0">{label}</label>
+                      {stored && !value && (
+                        <span className="flex items-center gap-1 text-caption-md text-success font-medium">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                          Saved
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      value={value}
+                      onChange={e => onChange(e.target.value)}
+                      type="password"
+                      className="input font-mono"
+                      placeholder={stored ? 'Saved — enter new value to replace' : placeholder}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
 
