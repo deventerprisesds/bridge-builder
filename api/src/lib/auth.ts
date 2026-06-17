@@ -35,15 +35,12 @@ export async function verifyToken(req: HttpRequest): Promise<string> {
       },
       (err, decoded: any) => {
         if (err) {
-          console.error('[auth] JWT verify failed:', err.message, '| issuer expected:', `https://${entraTenantName}.ciamlogin.com/${entraTenantName}.onmicrosoft.com/v2.0/`)
-          return reject(new Error('Invalid token'))
+          return reject(new Error(`Invalid token: ${err.message} | expected issuer: https://${entraTenantName}.ciamlogin.com/${entraTenantName}.onmicrosoft.com/v2.0/`))
         }
 
-        // Entra External ID puts email in 'email' claim (not 'emails' array like B2C)
         const email = decoded.email ?? decoded.preferred_username ?? decoded.emails?.[0] ?? ''
-        console.log('[auth] token email:', email, '| allowed:', allowedEmail, '| iss:', decoded.iss)
         if (email.toLowerCase() !== allowedEmail.toLowerCase()) {
-          return reject(new Error('Unauthorised user'))
+          return reject(new Error(`Unauthorised: token email="${email}" does not match allowed="${allowedEmail}"`))
         }
         resolve(decoded.sub as string)
       }
