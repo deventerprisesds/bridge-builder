@@ -18,6 +18,9 @@ const HIGH_VALUE_PATTERNS = [
   /notification/i, /push/i, /supabase/i, /realtime/i,
   /email/i, /chat/i, /inbox/i, /message/i, /comms/i,
   /context/i, /provider/i, /channel/i,
+  /calendar/i, /outlook/i, /google/i, /microsoft/i, /graph/i,
+  /slack/i, /webhook/i, /digest/i, /reminder/i, /alert/i,
+  /firebase/i, /fcm/i, /toast/i, /settings/i, /hook/i,
 ]
 
 function scoreFile(path: string): number {
@@ -182,7 +185,7 @@ app.http('scanWebapp', {
           .map(path => ({ path, score: scoreFile(path) }))
           .filter(f => f.score > 0)
           .sort((a, b) => b.score - a.score)
-          .slice(0, 15)
+          .slice(0, 25)
           .map(f => f.path)
 
         let sourceContext = ''
@@ -202,21 +205,38 @@ app.http('scanWebapp', {
               messages: [
                 {
                   role: 'system',
-                  content: `You are a code analyst for an Android WebView bridge tool. Analyse the React/TypeScript source code and return ONLY a JSON object.
+                  content: `You are a code analyst producing Android notification channel configuration for a WebView bridge app. Your output drives real Android notification channels — thoroughness is critical. Analyse ALL provided source files and return ONLY a JSON object.
 
-IMPORTANT RULES:
-- appName: use the real product name from code/config, NEVER "Vite App", "Vite + React", or generic placeholders
-- themeColor: extract from tailwind config primary/brand color or CSS variables, NOT black (#000000) unless truly intentional
-- Exhaustively find ALL routes defined in the router (React Router, TanStack Router, etc.)
-- For deepLinks: map every route to a human-readable name
-- Notification channels: look for EVERY notification type — Supabase realtime, FCM/Firebase push, email (Resend, SendGrid, nodemailer), in-app chat/inbox, toast systems. Create a channel entry for each distinct type found.
-- voiceContextFound: true if any speech recognition, TTS, voice assistant, or microphone usage exists
-- widgetDataUrlHint: if there is an endpoint that returns summary/dashboard data suitable for a home screen widget
+RULES — read carefully:
 
-Return this exact JSON shape:
+appName: Use the real product name from package.json "name", app title, or branding. NEVER return "Vite App", "Vite + React", "React App", or any generic placeholder.
+
+themeColor: Extract the primary/brand hex color from tailwind.config primary/brand scale, CSS variables (--primary, --brand, --color-primary), or theme constants. Do NOT return #000000 or #ffffff unless the brand is genuinely monochrome.
+
+routes + deepLinks: Find EVERY route in the router file (React Router <Route>, createBrowserRouter, TanStack Router). Map each path to a human-readable name.
+
+suggestedChannels — THIS IS THE MOST IMPORTANT FIELD. You MUST create a separate channel entry for each distinct notification type you can find evidence of, including:
+  • Push notifications (FCM, Firebase, service workers, Supabase push)
+  • Email notifications (Resend, SendGrid, nodemailer, Supabase email, any email trigger)
+  • In-app toasts / banners (sonner, react-hot-toast, shadcn toast, custom)
+  • Slack / Teams / webhook integrations
+  • Calendar integrations — Outlook/Microsoft Graph events, Google Calendar events
+  • Due date reminders, overdue alerts, deadline warnings
+  • Digest emails — daily digest, weekly digest, summaries
+  • Task lifecycle events — created, assigned, completed, commented
+  • Chat / messaging / realtime (Supabase realtime, socket.io, presence)
+  • Any other distinct event type found in the codebase
+
+For each channel: choose id as snake_case, importance "high" for time-sensitive alerts (reminders, overdue, calendar), "default" for digests and informational, repeatEnabled true for recurring scheduled notifications (digests, reminders).
+
+voiceContextFound: true if ANY speech recognition, SpeechSynthesis, Web Speech API, microphone access, TTS, or voice assistant code exists.
+
+widgetDataUrlHint: the most useful API endpoint for a home screen widget (tasks due today, agenda, summary data).
+
+Return exactly this JSON shape — no extra keys, no markdown:
 {
   "appName": string,
-  "themeColor": string (hex, e.g. "#1e6b52"),
+  "themeColor": string,
   "voiceContextFound": boolean,
   "routes": string[],
   "deepLinks": { [humanName: string]: string },
@@ -230,8 +250,7 @@ Return this exact JSON shape:
     "description": string
   }],
   "widgetDataUrlHint": string,
-  "notificationSystems": string[],
-  "confidence": { [field]: "found" | "inferred" | "default" }
+  "confidence": { [field]: "found"|"inferred"|"default" }
 }`
                 },
                 { role: 'user', content: `Webapp URL: ${url}\n\nSource files:${sourceContext}` }

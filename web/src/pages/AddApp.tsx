@@ -203,7 +203,7 @@ export default function AddApp() {
                     onChange={e => setOpenAiKey(e.target.value)}
                     type="password"
                     className="input font-mono"
-                    placeholder="sk-…"
+                    placeholder="Leave blank — uses key already on file"
                   />
                 </div>
                 <div>
@@ -213,7 +213,7 @@ export default function AddApp() {
                     onChange={e => setGithubToken(e.target.value)}
                     type="password"
                     className="input font-mono"
-                    placeholder="ghp_…"
+                    placeholder="Leave blank — uses token already on file"
                   />
                 </div>
               </div>
