@@ -86,6 +86,8 @@ export interface ScanResult {
   deepLinks?: Record<string, string>
   suggestedChannels?: Channel[]
   widgetDataUrlHint?: string
+  compassThemeColor?: string
+  figmaStyles?: Record<string, string>
   confidence: Record<string, 'found' | 'inferred' | 'default'>
 }
 

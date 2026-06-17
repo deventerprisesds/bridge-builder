@@ -269,6 +269,35 @@ export default function AddApp() {
               </div>
             </div>
 
+            {scanResult?.compassThemeColor && (
+              <div className="flex items-center gap-3 p-3 bg-neutral-50 border border-neutral-200 rounded-lg">
+                <span
+                  className="w-5 h-5 rounded flex-shrink-0 border border-neutral-200"
+                  style={{ backgroundColor: scanResult.compassThemeColor }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-label-sm font-medium text-neutral-700">Compass design system colour available</p>
+                  <p className="text-caption-md text-neutral-400">{scanResult.compassThemeColor}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setConfig(c => c ? { ...c, themeColor: scanResult.compassThemeColor! } : c)}
+                  className="btn-secondary py-1 px-3 text-body-sm flex-shrink-0"
+                >
+                  Apply
+                </button>
+                {config?.themeColor === scanResult.compassThemeColor && (
+                  <button
+                    type="button"
+                    onClick={() => setConfig(c => c ? { ...c, themeColor: scanResult.themeColor ?? '#1e40af' } : c)}
+                    className="btn-ghost py-1 px-3 text-body-sm text-neutral-500 flex-shrink-0"
+                  >
+                    Revert
+                  </button>
+                )}
+              </div>
+            )}
+
             <ConfigEditor
               config={config}
               confidence={scanResult?.confidence}

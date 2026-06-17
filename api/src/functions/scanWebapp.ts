@@ -121,7 +121,7 @@ app.http('scanWebapp', {
         }
       } catch { /* no manifest */ }
 
-      // ── Rule-based: HTML (only use title if it's meaningful) ─────────────
+      // ── Rule-based: HTML ─────────────────────────────────────────────────
       try {
         const html = await fetch(url).then(r => r.text())
         const titleMatch = html.match(/<title>(.*?)<\/title>/i)
@@ -138,17 +138,36 @@ app.http('scanWebapp', {
             result.confidence.themeColor = 'found'
           }
         }
+        // Icon: apple-touch-icon > high-res icon link > og:image > favicon
+        if (!result.iconUrl) {
+          const appleIcon = html.match(/<link[^>]+rel="apple-touch-icon"[^>]+href="([^"]+)"/i)
+            ?? html.match(/<link[^>]+href="([^"]+)"[^>]+rel="apple-touch-icon"/i)
+          const iconLink  = html.match(/<link[^>]+rel="icon"[^>]+href="([^"]+)"/i)
+            ?? html.match(/<link[^>]+href="([^"]+)"[^>]+rel="icon"/i)
+          const ogImage   = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i)
+            ?? html.match(/<meta[^>]+content="([^"]+)"[^>]+property="og:image"/i)
+          const iconHref  = appleIcon?.[1] ?? iconLink?.[1] ?? ogImage?.[1]
+          if (iconHref) {
+            result.iconUrl = iconHref.startsWith('http') ? iconHref : `${url}${iconHref.startsWith('/') ? '' : '/'}${iconHref}`
+            result.confidence.iconUrl = 'found'
+          } else {
+            // Last resort: favicon.ico
+            const faviconRes = await fetch(`${url}/favicon.ico`).catch(() => null)
+            if (faviconRes?.ok) {
+              result.iconUrl = `${url}/favicon.ico`
+              result.confidence.iconUrl = 'found'
+            }
+          }
+        }
       } catch { /* URL unreachable */ }
 
-      // ── Figma theme extraction ────────────────────────────────────────────
+      // ── Figma theme — stored separately so UI can offer Apply/Revert ──────
       if (figmaFileId && figmaKey) {
         const figma = await fetchFigmaTheme(figmaFileId, figmaKey)
         if (figma) {
+          result.compassThemeColor = figma.themeColor  // exposed for the "Apply Compass theme" button
           result.figmaStyles = figma.figmaStyles
-          if (figma.themeColor) {
-            result.themeColor = figma.themeColor
-            result.confidence.themeColor = 'figma'
-          }
+          // Do NOT override themeColor here — let the user choose via the button
         }
       }
 
