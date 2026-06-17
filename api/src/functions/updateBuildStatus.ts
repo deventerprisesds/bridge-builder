@@ -26,12 +26,11 @@ app.http('updateBuildStatus', {
     const client = getTable('BridgeBuildJobs')
     const jobs: any[] = []
 
-    // Find by runId if given, otherwise find pending job for appId
-    const filter = githubRunId
-      ? `AppId eq '${appId}' and GithubRunId eq '${githubRunId}'`
-      : subjectId
-        ? `PartitionKey eq '${subjectId}' and AppId eq '${appId}' and Status eq 'pending'`
-        : `AppId eq '${appId}' and Status eq 'pending'`
+    // Transitioning to 'building': job has no runId yet — find the pending job by appId.
+    // Transitioning to 'ready'/'failed': runId was set by the building step, use it.
+    const filter = (status === 'building' || !githubRunId)
+      ? `AppId eq '${appId}' and Status eq 'pending'`
+      : `AppId eq '${appId}' and GithubRunId eq '${githubRunId}'`
 
     for await (const entity of client.listEntities({ queryOptions: { filter } })) {
       jobs.push(entity)
