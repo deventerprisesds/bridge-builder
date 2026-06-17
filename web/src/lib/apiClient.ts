@@ -80,6 +80,29 @@ export interface App {
   UpdatedAt: string
 }
 
+export interface CapabilityReportItem {
+  checklistId: string
+  verdict: 'satisfied' | 'applicable_not_implemented' | 'not_applicable'
+  finding: string
+  file: string
+  line: number
+  currentBehaviour: string
+  androidMapping: string
+  confidence: 'found' | 'inferred' | 'default'
+}
+
+export const ANDROID_CAPABILITY_CHECKLIST = [
+  { id: 'push_notifications',    label: 'Push notifications' },
+  { id: 'notification_channels', label: 'Notification channels' },
+  { id: 'voice_input',           label: 'Voice input / talk button' },
+  { id: 'home_widget',           label: 'Home screen widget' },
+  { id: 'app_shortcuts',         label: 'Long-press app shortcuts' },
+  { id: 'quick_tile',            label: 'Quick settings tile' },
+  { id: 'deep_links',            label: 'Deep linking' },
+  { id: 'background_sync',       label: 'Background data sync' },
+  { id: 'lock_screen_actions',   label: 'Lock screen actions' },
+] as const
+
 export interface ScanResult {
   appName?: string
   themeColor?: string
@@ -91,6 +114,8 @@ export interface ScanResult {
   widgetDataUrlHint?: string
   compassThemeColor?: string
   figmaStyles?: Record<string, string>
+  capabilityReport?: CapabilityReportItem[]
+  scanError?: string
   confidence: Record<string, 'found' | 'inferred' | 'default'>
 }
 

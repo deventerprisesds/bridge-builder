@@ -4,6 +4,7 @@ import { scanWebapp, triggerBuild, storeApiKeys, getApiKeyStatus, ScanResult, Br
 import { useSaveApp } from '../hooks/useApps'
 import { ScanProgress } from '../components/ScanProgress'
 import { ConfigEditor, scanResultToConfig } from '../components/ConfigEditor'
+import { CapabilityReport } from '../components/CapabilityReport'
 
 type Step = 1 | 2 | 3 | 4
 
@@ -305,6 +306,15 @@ export default function AddApp() {
                     Revert
                   </button>
                 )}
+              </div>
+            )}
+
+            {scanResult?.capabilityReport && scanResult.capabilityReport.length > 0 && (
+              <div>
+                <h3 className="text-label-md font-semibold text-neutral-800 mb-2">
+                  Android capability scan
+                </h3>
+                <CapabilityReport report={scanResult.capabilityReport} />
               </div>
             )}
 
