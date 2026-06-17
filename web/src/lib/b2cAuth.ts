@@ -34,16 +34,28 @@ export const loginRequest = {
   prompt: 'select_account'
 }
 
+// Token stored directly from handleRedirectPromise or acquireTokenSilent
+let _cachedIdToken: string | null = null
+
+export function setCachedToken(token: string | null) {
+  _cachedIdToken = token
+}
+
 export async function getToken(): Promise<string | null> {
+  if (_cachedIdToken) return _cachedIdToken
+
   const accounts = msalInstance.getAllAccounts()
   if (accounts.length === 0) return null
+
   try {
     const result: AuthenticationResult = await msalInstance.acquireTokenSilent({
-      scopes: loginRequest.scopes,  // no prompt — prompt is invalid for silent requests
+      scopes: loginRequest.scopes,
       account: accounts[0]
     })
-    return result.idToken
-  } catch {
+    _cachedIdToken = result.idToken
+    return _cachedIdToken
+  } catch (e) {
+    console.error('[getToken] acquireTokenSilent failed:', e)
     return null
   }
 }
