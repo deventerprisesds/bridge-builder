@@ -48,11 +48,11 @@ export async function getToken(): Promise<string | null> {
 }
 
 export async function signIn(): Promise<void> {
-  await msalInstance.loginPopup(loginRequest)
+  await msalInstance.loginRedirect(loginRequest)
 }
 
 export async function signOut(): Promise<void> {
-  await msalInstance.logoutPopup()
+  await msalInstance.logoutRedirect()
 }
 
 export function getCurrentUser(): AccountInfo | null {

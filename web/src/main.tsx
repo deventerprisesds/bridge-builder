@@ -13,8 +13,13 @@ const queryClient = new QueryClient({
 
 // MSAL must be initialised before any component that calls auth methods
 msalInstance.initialize().then(() => {
-  // Handle redirect callback (if any)
-  msalInstance.handleRedirectPromise().catch(console.error)
+  // Handle redirect callback — resolves with AuthenticationResult after login redirect returns
+  msalInstance.handleRedirectPromise().then((result) => {
+    if (result?.account) {
+      // Redirect login just completed — go to dashboard
+      window.location.replace('/')
+    }
+  }).catch(console.error)
 
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>

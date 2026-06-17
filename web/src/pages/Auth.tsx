@@ -11,8 +11,8 @@ export default function Auth() {
 
   const handleLogin = async () => {
     try {
-      await msalInstance.loginPopup(loginRequest)
-      navigate('/')
+      await msalInstance.loginRedirect(loginRequest)
+      // redirect flow — navigation happens after handleRedirectPromise resolves on return
     } catch (err) {
       console.error('Login failed', err)
     }
