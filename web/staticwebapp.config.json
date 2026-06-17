@@ -1,31 +1,11 @@
 {
   "routes": [
     {
-      "route": "/api/*",
-      "allowedRoles": ["authenticated"]
-    },
-    {
-      "route": "/login",
-      "redirect": "/.auth/login/aad"
-    },
-    {
       "route": "/*",
       "serve": "/index.html",
       "statusCode": 200
     }
   ],
-  "auth": {
-    "identityProviders": {
-      "azureActiveDirectory": {
-        "registration": {
-          "openIdIssuer": "https://enterpriseds.ciamlogin.com/enterpriseds.onmicrosoft.com/v2.0/",
-          "clientIdSettingName": "VITE_ENTRA_CLIENT_ID",
-          "clientSecretSettingName": "ENTRA_CLIENT_SECRET"
-        },
-        "userDetailsClaim": "email"
-      }
-    }
-  },
   "navigationFallback": {
     "rewrite": "/index.html",
     "exclude": ["/assets/*", "/*.{css,js,png,ico,svg}"]

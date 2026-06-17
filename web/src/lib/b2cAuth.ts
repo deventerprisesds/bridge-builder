@@ -18,7 +18,8 @@ export const msalConfig: Configuration = {
     clientId,
     authority,
     knownAuthorities: [`${tenantName}.ciamlogin.com`],
-    redirectUri: window.location.origin
+    redirectUri: window.location.origin,
+    navigateToLoginRequestUrl: false  // always land on root after redirect, not back to /login
   },
   cache: {
     cacheLocation: 'localStorage',
