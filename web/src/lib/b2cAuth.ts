@@ -23,7 +23,7 @@ export const msalConfig: Configuration = {
   },
   cache: {
     cacheLocation: 'localStorage',
-    storeAuthStateInCookie: false
+    storeAuthStateInCookie: true  // required for Edge/Safari tracking prevention blocking redirect state
   }
 }
 
