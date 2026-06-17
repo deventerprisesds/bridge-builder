@@ -2,13 +2,13 @@ import { HttpRequest } from '@azure/functions'
 import * as jwt from 'jsonwebtoken'
 import jwksClient from 'jwks-rsa'
 
-// Env var is ENTRA_EXTERNAL_TENANT_NAME on the live function app
 const entraTenantName = (process.env.ENTRA_EXTERNAL_TENANT_NAME ?? process.env.ENTRA_TENANT_NAME)!
+const entraTenantId   = process.env.ENTRA_EXTERNAL_TENANT_ID!
 const allowedEmail    = process.env.ALLOWED_USER_EMAIL!
 
-// Entra External ID (CIAM) JWKS endpoint
+// Tokens issued via Google OAuth through CIAM use tenant ID in both JWKS and issuer URLs
 const client = jwksClient({
-  jwksUri: `https://${entraTenantName}.ciamlogin.com/${entraTenantName}.onmicrosoft.com/discovery/v2.0/keys`,
+  jwksUri: `https://${entraTenantId}.ciamlogin.com/${entraTenantId}/discovery/v2.0/keys`,
   cache: true,
   rateLimit: true
 })
@@ -34,11 +34,11 @@ export async function verifyToken(req: HttpRequest): Promise<string> {
       {
         algorithms: ['RS256'],
         // Entra External ID issuer for CIAM tenants
-        issuer: `https://${entraTenantName}.ciamlogin.com/${entraTenantName}.onmicrosoft.com/v2.0/`
+        issuer: `https://${entraTenantId}.ciamlogin.com/${entraTenantId}/v2.0`
       },
       (err, decoded: any) => {
         if (err) {
-          return reject(new Error(`Invalid token: ${err.message} | actual iss="${actualIss}" | expected iss="https://${entraTenantName}.ciamlogin.com/${entraTenantName}.onmicrosoft.com/v2.0/"`))
+          return reject(new Error(`Invalid token: ${err.message} | actual iss="${actualIss}" | expected iss="https://${entraTenantId}.ciamlogin.com/${entraTenantId}/v2.0"`))
         }
 
         const email = decoded.email ?? decoded.preferred_username ?? decoded.emails?.[0] ?? ''
