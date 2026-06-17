@@ -9,224 +9,221 @@ import { ApkDownloadButton } from '../components/ApkDownloadButton'
 
 export default function AppDetail() {
   const { appId } = useParams<{ appId: string }>()
-  const navigate = useNavigate()
-  const app = useApp(appId)
+  const navigate  = useNavigate()
+  const app       = useApp(appId)
   const { data: build, isLoading: buildLoading } = useBuildStatus(appId)
-  const { mutateAsync: saveApp } = useSaveApp()
+  const { mutateAsync: saveApp }   = useSaveApp()
   const { mutateAsync: deleteApp } = useDeleteApp()
 
-  const [editing, setEditing]     = useState(false)
-  const [building, setBuilding]   = useState(false)
-  const [error, setError]         = useState('')
+  const [editing, setEditing]   = useState(false)
+  const [building, setBuilding] = useState(false)
+  const [error, setError]       = useState('')
+  const [config, setConfig]     = useState<BridgeConfig | null>(null)
 
-  const [config, setConfig] = useState<BridgeConfig | null>(null)
-
-  function getConfig(): BridgeConfig | null {
+  function parsedConfig(): BridgeConfig | null {
     if (!app) return null
-    try {
-      return JSON.parse(app.ConfigJson) as BridgeConfig
-    } catch {
-      return { appName: app.AppName, baseUrl: app.BaseUrl, themeColor: app.ThemeColor || '#1e40af', deepLinks: {}, channels: [] }
-    }
+    try { return JSON.parse(app.ConfigJson) as BridgeConfig }
+    catch { return { appName: app.AppName, baseUrl: app.BaseUrl, themeColor: app.ThemeColor || '#1b4f5c', deepLinks: {}, channels: [] } }
   }
 
-  const displayConfig = config ?? getConfig()
+  const displayConfig = config ?? parsedConfig()
 
   async function handleSave() {
     if (!app || !displayConfig) return
-    await saveApp({
-      appId:      app.rowKey,
-      appName:    displayConfig.appName,
-      baseUrl:    displayConfig.baseUrl,
-      iconUrl:    displayConfig.iconUrl,
-      themeColor: displayConfig.themeColor,
-      configJson: JSON.stringify(displayConfig)
-    })
-    setEditing(false)
-    setConfig(null)
+    await saveApp({ appId: app.rowKey, appName: displayConfig.appName, baseUrl: displayConfig.baseUrl,
+      iconUrl: displayConfig.iconUrl, themeColor: displayConfig.themeColor, configJson: JSON.stringify(displayConfig) })
+    setEditing(false); setConfig(null)
   }
 
   async function handleRebuild() {
     if (!app || !displayConfig) return
-    setBuilding(true)
-    setError('')
-    try {
-      await triggerBuild(app.rowKey, displayConfig)
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setBuilding(false)
-    }
+    setBuilding(true); setError('')
+    try { await triggerBuild(app.rowKey, displayConfig) }
+    catch (err: any) { setError(err.message) }
+    finally { setBuilding(false) }
   }
 
   async function handleDelete() {
-    if (!app) return
-    if (!confirm(`Delete ${app.AppName}? This cannot be undone.`)) return
+    if (!app || !confirm(`Delete ${app.AppName}? This cannot be undone.`)) return
     await deleteApp(app.rowKey)
     navigate('/')
   }
 
-  if (!app) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading…</div>
-      </div>
-    )
-  }
+  if (!app) return (
+    <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+      <div className="skeleton w-32 h-8 rounded" />
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-3xl mx-auto flex items-center gap-4">
-          <Link to="/" className="text-gray-400 hover:text-gray-600">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+    <div className="min-h-screen bg-neutral-50">
+
+      {/* ── Header ────────────────────────────────────────────────────── */}
+      <header className="bg-neutral-0 border-b border-neutral-200 sticky top-0 z-20 shadow-elevation-0">
+        <div className="max-w-3xl mx-auto px-6 h-14 flex items-center gap-4">
+          <Link to="/" className="w-8 h-8 rounded-md flex items-center justify-center
+                                  text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700
+                                  transition-colors duration-150 flex-shrink-0">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </Link>
 
           <div className="flex items-center gap-3 flex-1 min-w-0">
             {app.IconUrl ? (
               <img src={app.IconUrl} alt={app.AppName}
-                className="w-8 h-8 rounded-lg object-contain border border-gray-100" />
+                className="w-7 h-7 rounded-md object-contain border border-neutral-100 flex-shrink-0" />
             ) : (
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
-                style={{ backgroundColor: app.ThemeColor || '#1e40af' }}>
-                {app.AppName[0]}
+              <div className="w-7 h-7 rounded-md flex items-center justify-center text-white
+                              text-caption-md font-bold flex-shrink-0"
+                style={{ backgroundColor: app.ThemeColor || '#1b4f5c' }}>
+                {app.AppName[0]?.toUpperCase()}
               </div>
             )}
-            <h1 className="font-semibold text-gray-900 truncate">{app.AppName}</h1>
+            <h1 className="text-label-lg font-semibold text-neutral-900 truncate">{app.AppName}</h1>
           </div>
 
-          <button
-            onClick={handleDelete}
-            className="text-red-500 hover:text-red-700 text-sm"
-          >Delete</button>
+          <button onClick={handleDelete}
+            className="btn-ghost py-1.5 px-3 text-body-sm text-error hover:bg-error-subtle hover:text-error">
+            Delete
+          </button>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+      <main className="max-w-3xl mx-auto px-6 py-8 space-y-5">
+
+        {/* Error */}
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
+          <div className="alert-error">
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="text-body-sm font-medium">{error}</span>
           </div>
         )}
 
-        {/* Build Status Card */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
+        {/* ── Build status card ────────────────────────────────────────── */}
+        <section className="card rounded-lg p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-medium text-gray-900">Build status</h2>
-            <Link to={`/app/${appId}/history`} className="text-sm text-blue-600 hover:text-blue-800">
+            <h2 className="text-label-lg font-semibold text-neutral-900">Build status</h2>
+            <Link to={`/app/${appId}/history`}
+              className="text-body-sm text-brand-600 hover:text-brand-700 font-medium transition-colors">
               History →
             </Link>
           </div>
 
           {buildLoading && (
-            <div className="animate-pulse h-8 bg-gray-100 rounded w-32" />
+            <div className="flex items-center gap-3">
+              <div className="skeleton w-16 h-5 rounded-full" />
+              <div className="skeleton w-24 h-3.5 rounded" />
+            </div>
           )}
 
           {!buildLoading && !build && (
-            <p className="text-gray-500 text-sm">No builds yet.</p>
+            <p className="text-body-sm text-neutral-400">No builds yet.</p>
           )}
 
           {build && (
             <div className="space-y-3">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center flex-wrap gap-3">
                 <BuildStatusBadge status={build.Status} />
                 {build.ApkVersion && (
-                  <span className="text-sm text-gray-500">v{build.ApkVersion}</span>
+                  <span className="text-body-sm text-neutral-600 font-medium">
+                    v{build.ApkVersion}
+                  </span>
                 )}
                 {build.StartedAt && (
-                  <span className="text-xs text-gray-400">
+                  <span className="text-caption-md text-neutral-400">
                     Started {new Date(build.StartedAt).toLocaleString()}
                   </span>
                 )}
               </div>
 
               {build.ErrorMessage && (
-                <p className="text-sm text-red-600 bg-red-50 rounded p-2">{build.ErrorMessage}</p>
+                <div className="alert-error text-body-sm">
+                  {build.ErrorMessage}
+                </div>
               )}
 
               <ApkDownloadButton job={build} />
             </div>
           )}
 
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 pt-4 border-t border-neutral-100">
             <button
               onClick={handleRebuild}
               disabled={building || build?.Status === 'building' || build?.Status === 'pending'}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50
-                         text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+              className="btn-secondary py-1.5 px-3 text-body-sm gap-1.5 disabled:opacity-40"
             >
-              {building ? 'Triggering…' : '↺ Rebuild'}
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {building ? 'Triggering…' : 'Rebuild'}
             </button>
           </div>
-        </div>
+        </section>
 
-        {/* Config Card */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
+        {/* ── Config card ──────────────────────────────────────────────── */}
+        <section className="card rounded-lg p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-medium text-gray-900">Configuration</h2>
+            <h2 className="text-label-lg font-semibold text-neutral-900">Configuration</h2>
             {!editing && (
               <button
-                onClick={() => { setConfig(getConfig()); setEditing(true) }}
-                className="text-sm text-blue-600 hover:text-blue-800"
-              >Edit</button>
+                onClick={() => { setConfig(parsedConfig()); setEditing(true) }}
+                className="text-body-sm text-brand-600 hover:text-brand-700 font-medium transition-colors"
+              >
+                Edit
+              </button>
             )}
           </div>
 
           {editing && displayConfig ? (
             <div className="space-y-4">
-              <ConfigEditor
-                config={displayConfig}
-                onChange={setConfig}
-              />
+              <ConfigEditor config={displayConfig} onChange={setConfig} />
               <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => { setEditing(false); setConfig(null) }}
-                  className="flex-1 border border-gray-300 rounded-lg py-2 text-sm text-gray-600 hover:bg-gray-50"
-                >Cancel</button>
-                <button
-                  onClick={handleSave}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium"
-                >Save</button>
+                <button onClick={() => { setEditing(false); setConfig(null) }}
+                  className="btn-secondary flex-1 justify-center py-2">
+                  Cancel
+                </button>
+                <button onClick={handleSave} className="btn-primary flex-1 justify-center py-2">
+                  Save changes
+                </button>
               </div>
             </div>
           ) : displayConfig ? (
-            <pre className="bg-gray-50 text-xs rounded-lg p-4 overflow-auto max-h-64 text-gray-700">
+            <pre className="bg-neutral-50 text-caption-md rounded-lg p-4 overflow-auto
+                            max-h-64 text-neutral-700 leading-relaxed border border-neutral-200">
               {JSON.stringify(displayConfig, null, 2)}
             </pre>
           ) : (
-            <p className="text-gray-500 text-sm">No configuration saved yet.</p>
+            <p className="text-body-sm text-neutral-400">No configuration saved yet.</p>
           )}
-        </div>
+        </section>
 
-        {/* App info */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <h2 className="font-medium text-gray-900 mb-3">Details</h2>
-          <dl className="space-y-2 text-sm">
-            <div className="flex gap-2">
-              <dt className="text-gray-500 w-28 flex-shrink-0">App ID</dt>
-              <dd className="text-gray-900 font-mono text-xs">{app.rowKey}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="text-gray-500 w-28 flex-shrink-0">Base URL</dt>
-              <dd className="text-gray-900"><a href={app.BaseUrl} target="_blank" rel="noreferrer"
-                className="text-blue-600 hover:underline">{app.BaseUrl}</a></dd>
-            </div>
-            {app.GithubRepoUrl && (
-              <div className="flex gap-2">
-                <dt className="text-gray-500 w-28 flex-shrink-0">GitHub</dt>
-                <dd><a href={app.GithubRepoUrl} target="_blank" rel="noreferrer"
-                  className="text-blue-600 hover:underline text-xs">{app.GithubRepoUrl}</a></dd>
+        {/* ── App details card ─────────────────────────────────────────── */}
+        <section className="card rounded-lg p-5">
+          <h2 className="text-label-lg font-semibold text-neutral-900 mb-4">Details</h2>
+          <dl className="space-y-2.5 text-body-sm">
+            {[
+              ['App ID',    <span className="font-mono text-caption-md">{app.rowKey}</span>],
+              ['Base URL',  <a href={app.BaseUrl} target="_blank" rel="noreferrer"
+                               className="text-brand-600 hover:underline">{app.BaseUrl}</a>],
+              app.GithubRepoUrl && ['GitHub', <a href={app.GithubRepoUrl} target="_blank" rel="noreferrer"
+                               className="text-brand-600 hover:underline text-caption-md">{app.GithubRepoUrl}</a>],
+              ['Created',   new Date(app.CreatedAt).toLocaleString()],
+            ].filter(Boolean).map(([key, val], i) => (
+              <div key={i} className="flex gap-2">
+                <dt className="text-neutral-400 w-24 flex-shrink-0 pt-px">{key}</dt>
+                <dd className="text-neutral-900 min-w-0">{val as React.ReactNode}</dd>
               </div>
-            )}
-            <div className="flex gap-2">
-              <dt className="text-gray-500 w-28 flex-shrink-0">Created</dt>
-              <dd className="text-gray-900">{new Date(app.CreatedAt).toLocaleString()}</dd>
-            </div>
+            ))}
           </dl>
-        </div>
+        </section>
+
       </main>
     </div>
   )

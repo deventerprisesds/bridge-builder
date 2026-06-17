@@ -9,38 +9,54 @@ export function AppCard({ app }: { app: App }) {
   return (
     <Link
       to={`/app/${app.rowKey}`}
-      className="block bg-white border border-gray-200 rounded-xl p-5
-                 hover:border-blue-300 hover:shadow-md transition-all"
+      className="group block card p-5 hover:shadow-elevation-2 hover:border-brand-200
+                 transition-all duration-200 focus-visible:outline-none"
+      style={{ ['--tw-shadow' as any]: undefined }}
     >
       <div className="flex items-start gap-4">
+        {/* App icon */}
         {app.IconUrl ? (
           <img
             src={app.IconUrl}
             alt={app.AppName}
-            className="w-12 h-12 rounded-xl object-contain border border-gray-100 flex-shrink-0"
+            className="w-12 h-12 rounded-lg object-contain border border-neutral-100 flex-shrink-0
+                       shadow-elevation-0"
           />
         ) : (
           <div
-            className="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-white text-lg font-bold"
-            style={{ backgroundColor: app.ThemeColor || '#1e40af' }}
+            className="w-12 h-12 rounded-lg flex-shrink-0 flex items-center justify-center
+                       text-white text-body-lg font-bold shadow-elevation-0"
+            style={{ backgroundColor: app.ThemeColor || '#1b4f5c' }}
           >
-            {app.AppName?.[0] ?? '?'}
+            {app.AppName?.[0]?.toUpperCase() ?? '?'}
           </div>
         )}
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-medium text-gray-900 truncate">{app.AppName}</h3>
+        {/* Content */}
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-body-md font-semibold text-neutral-900 truncate">
+              {app.AppName}
+            </h3>
             {build && <BuildStatusBadge status={build.Status} />}
           </div>
-          <p className="text-xs text-gray-500 truncate">{app.BaseUrl}</p>
+
+          <p className="text-caption-md text-neutral-400 truncate">{app.BaseUrl}</p>
+
           {build?.Status === 'ready' && build.ApkVersion && (
-            <p className="text-xs text-green-600 mt-1">v{build.ApkVersion} ready</p>
+            <p className="text-caption-md text-success font-medium">
+              v{build.ApkVersion} ready to download
+            </p>
           )}
         </div>
 
-        <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        {/* Chevron */}
+        <svg
+          className="w-4 h-4 text-neutral-300 flex-shrink-0 mt-0.5
+                     group-hover:text-brand-400 transition-colors duration-150"
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
         </svg>
       </div>
     </Link>

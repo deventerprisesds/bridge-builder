@@ -7,18 +7,36 @@ interface Props {
   onChange: (config: BridgeConfig) => void
 }
 
+/** Compass confidence dot — green = found, amber = inferred, grey = default */
 function ConfidenceDot({ level }: { level?: string }) {
   if (!level) return null
-  const colour =
-    level === 'found'    ? 'bg-green-500' :
-    level === 'inferred' ? 'bg-yellow-400' :
-    'bg-gray-300'
-  const label =
+  const title =
     level === 'found'    ? 'Found in source' :
-    level === 'inferred' ? 'Inferred by AI' :
-    'Default value'
+    level === 'inferred' ? 'Inferred by AI'  : 'Default value'
+  const colour =
+    level === 'found'    ? 'bg-success'       :
+    level === 'inferred' ? 'bg-warning'       : 'bg-neutral-300'
+
   return (
-    <span title={label} className={`inline-block w-2 h-2 rounded-full ${colour} ml-1 flex-shrink-0`} />
+    <span
+      title={title}
+      className={`inline-block w-1.5 h-1.5 rounded-full ${colour} ml-1 flex-shrink-0`}
+    />
+  )
+}
+
+function FieldLabel({
+  children,
+  confidence,
+}: {
+  children: React.ReactNode
+  confidence?: string
+}) {
+  return (
+    <label className="flex items-center gap-1 form-label">
+      {children}
+      <ConfidenceDot level={confidence} />
+    </label>
   )
 }
 
@@ -28,139 +46,148 @@ export function ConfigEditor({ config, confidence = {}, onChange }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+
       {/* App Name */}
       <div>
-        <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
-          App Name <ConfidenceDot level={confidence.appName} />
-        </label>
+        <FieldLabel confidence={confidence.appName}>App Name</FieldLabel>
         <input
           value={config.appName}
           onChange={e => set('appName', e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          className="input"
           placeholder="My App"
         />
       </div>
 
       {/* Base URL */}
       <div>
-        <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
-          Base URL
-        </label>
+        <FieldLabel>Base URL</FieldLabel>
         <input
           value={config.baseUrl}
           onChange={e => set('baseUrl', e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+          className="input font-mono"
           placeholder="https://myapp.com"
         />
       </div>
 
-      {/* Theme Color */}
+      {/* Theme Colour */}
       <div>
-        <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
-          Theme Color <ConfidenceDot level={confidence.themeColor} />
-        </label>
+        <FieldLabel confidence={confidence.themeColor}>Theme Colour</FieldLabel>
         <div className="flex items-center gap-2">
           <input
             type="color"
             value={config.themeColor}
             onChange={e => set('themeColor', e.target.value)}
-            className="w-10 h-9 border border-gray-300 rounded cursor-pointer p-0.5"
+            className="w-10 h-9 border border-neutral-200 rounded-md cursor-pointer p-0.5
+                       bg-white shadow-elevation-0 flex-shrink-0"
           />
           <input
             value={config.themeColor}
             onChange={e => set('themeColor', e.target.value)}
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
-            placeholder="#1e40af"
+            className="input font-mono"
+            placeholder="#1b4f5c"
           />
         </div>
       </div>
 
       {/* Icon URL */}
       <div>
-        <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
-          Icon URL <ConfidenceDot level={confidence.iconUrl} />
-        </label>
+        <FieldLabel confidence={confidence.iconUrl}>Icon URL</FieldLabel>
         <input
           value={config.iconUrl ?? ''}
           onChange={e => set('iconUrl', e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+          className="input font-mono"
           placeholder="https://myapp.com/icon-512.png"
         />
         {config.iconUrl && (
-          <img src={config.iconUrl} alt="icon preview"
-            className="mt-2 w-12 h-12 rounded-lg object-contain border border-gray-200"
-          />
+          <div className="mt-2 flex items-center gap-2">
+            <img
+              src={config.iconUrl}
+              alt="Icon preview"
+              className="w-10 h-10 rounded-lg object-contain border border-neutral-200
+                         shadow-elevation-0"
+            />
+            <span className="text-caption-md text-neutral-400">Preview</span>
+          </div>
         )}
       </div>
 
       {/* Widget Data URL */}
       <div>
-        <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
-          Widget Data URL <ConfidenceDot level={confidence.widgetDataUrl} />
-        </label>
+        <FieldLabel confidence={confidence.widgetDataUrl}>Widget Data URL</FieldLabel>
         <input
           value={config.widgetDataUrl ?? ''}
           onChange={e => set('widgetDataUrl', e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+          className="input font-mono"
           placeholder="https://myapp.com/api/widget-data"
         />
+        <p className="form-hint">Used for Android home-screen widget</p>
       </div>
+
+      {/* Divider */}
+      <hr className="border-neutral-200" />
 
       {/* Deep Links */}
       <div>
-        <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-2">
-          Deep Links <ConfidenceDot level={confidence.deepLinks} />
-        </label>
+        <FieldLabel confidence={confidence.deepLinks}>Deep Links</FieldLabel>
         <div className="space-y-2">
           {Object.entries(config.deepLinks).map(([name, path]) => (
             <div key={name} className="flex items-center gap-2">
               <input
                 value={name}
                 onChange={e => {
-                  const newLinks = { ...config.deepLinks }
-                  delete newLinks[name]
-                  newLinks[e.target.value] = path
-                  set('deepLinks', newLinks)
+                  const updated = { ...config.deepLinks }
+                  delete updated[name]
+                  updated[e.target.value] = path
+                  set('deepLinks', updated)
                 }}
-                className="w-28 border border-gray-300 rounded px-2 py-1 text-sm"
+                className="input w-28 flex-shrink-0"
                 placeholder="Label"
               />
-              <span className="text-gray-400">→</span>
+              <span className="text-neutral-300 font-mono">→</span>
               <input
                 value={path}
                 onChange={e => set('deepLinks', { ...config.deepLinks, [name]: e.target.value })}
-                className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm font-mono"
+                className="input flex-1 font-mono"
                 placeholder="/route"
               />
               <button
                 onClick={() => {
-                  const newLinks = { ...config.deepLinks }
-                  delete newLinks[name]
-                  set('deepLinks', newLinks)
+                  const updated = { ...config.deepLinks }
+                  delete updated[name]
+                  set('deepLinks', updated)
                 }}
-                className="text-red-400 hover:text-red-600 text-xs px-1"
-              >✕</button>
+                className="w-7 h-7 flex items-center justify-center rounded text-neutral-400
+                           hover:bg-error-subtle hover:text-error transition-colors duration-150
+                           flex-shrink-0 text-body-sm"
+                title="Remove"
+              >
+                ✕
+              </button>
             </div>
           ))}
           <button
             onClick={() => set('deepLinks', { ...config.deepLinks, 'New': '/' })}
-            className="text-blue-600 hover:text-blue-800 text-sm"
+            className="text-body-sm text-brand-600 hover:text-brand-700 font-medium
+                       transition-colors duration-150"
           >
             + Add deep link
           </button>
         </div>
       </div>
 
+      {/* Divider */}
+      <hr className="border-neutral-200" />
+
       {/* Channels */}
       <div>
-        <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-2">
-          Notification Channels <ConfidenceDot level={confidence.suggestedChannels} />
-        </label>
+        <FieldLabel confidence={confidence.suggestedChannels}>
+          Notification Channels
+        </FieldLabel>
         <ChannelEditor
           channels={config.channels}
           deepLinks={config.deepLinks}
-          onChange={channels => set('channels', channels)}
+          onChange={ch => set('channels', ch)}
         />
       </div>
     </div>
@@ -170,14 +197,14 @@ export function ConfigEditor({ config, confidence = {}, onChange }: Props) {
 /** Convert a ScanResult into an initial BridgeConfig */
 export function scanResultToConfig(scan: ScanResult, baseUrl: string): BridgeConfig {
   return {
-    appName:       scan.appName    ?? new URL(baseUrl).hostname,
+    appName:      scan.appName    ?? new URL(baseUrl).hostname,
     baseUrl,
-    themeColor:    scan.themeColor ?? '#1e40af',
-    iconUrl:       scan.iconUrl,
-    deepLinks:     scan.deepLinks  ?? { Home: '/' },
-    channels:      scan.suggestedChannels ?? [
-      { id: 'general', name: 'General', deepLink: '/', importance: 'default', sound: 'default', repeatEnabled: false }
+    themeColor:   scan.themeColor ?? '#1b4f5c',
+    iconUrl:      scan.iconUrl,
+    deepLinks:    scan.deepLinks  ?? { Home: '/' },
+    channels:     scan.suggestedChannels ?? [
+      { id: 'general', name: 'General', deepLink: '/', importance: 'default', sound: 'default', repeatEnabled: false },
     ],
-    widgetDataUrl: scan.widgetDataUrlHint
+    widgetDataUrl: scan.widgetDataUrlHint,
   }
 }
