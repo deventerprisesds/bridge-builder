@@ -15,7 +15,10 @@ app.http('storeApiKeys', {
         figmaToken?: string
       }
 
-      const entity: Record<string, string> = {
+      const entity: {
+        partitionKey: string; rowKey: string; UpdatedAt: string
+        OpenAiKeyEncrypted?: string; GithubTokenEncrypted?: string; FigmaTokenEncrypted?: string
+      } = {
         partitionKey: 'keys',
         rowKey: subjectId,
         UpdatedAt: new Date().toISOString()
