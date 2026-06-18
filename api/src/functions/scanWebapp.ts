@@ -254,7 +254,7 @@ For EVERY item in the checklist, your capabilityReport MUST contain exactly one 
 
 ## CONFIG RULES
 appName: Real product name. NEVER "Vite App", "Vite + React", "React App".
-themeColor: Primary/brand hex from tailwind config or CSS variables. NOT #000 or #fff.
+themeColor: MUST be a plain 6-digit hex string (#RRGGBB). Look for it in tailwind.config.ts/js (colors/theme section) or CSS variable definitions in globals.css (:root { --primary: ... }). If the source only has CSS references like hsl(var(--primary)), find the actual numeric definition of that variable and resolve it to hex. NEVER return hsl(), rgb(), var(), or any CSS expression — a CSS expression will break the Android build. If you cannot resolve to a valid hex, OMIT themeColor entirely.
 routes + deepLinks: Map EVERY route path to a human-readable name.
 voiceContextFound: true if ANY SpeechRecognition, SpeechSynthesis, Web Speech API, or microphone code exists.
 widgetDataUrlHint: Best API endpoint for a home screen summary widget.
@@ -369,6 +369,13 @@ Return ONLY valid JSON — an object with one key:
             }
           } catch {
             result.scanError = `Capability parse failed: ${capabilityRaw.choices?.[0]?.finish_reason ?? 'unknown'}`
+          }
+
+          // Sanitize themeColor: reject anything that isn't a plain hex (#RGB / #RRGGBB / #AARRGGBB)
+          // CSS expressions like hsl(var(--primary)) break Android AAPT resource compilation.
+          if (result.themeColor && !/^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3}([0-9A-Fa-f]{2})?)?$/.test(result.themeColor as string)) {
+            delete result.themeColor
+            delete result.confidence.themeColor
           }
 
           // Process call 2: channels

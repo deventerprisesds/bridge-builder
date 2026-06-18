@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useApp, useSaveApp, useDeleteApp } from '../hooks/useApps'
 import { useBuildStatus } from '../hooks/useBuildStatus'
 import { triggerBuild, scanWebapp, BridgeConfig, ScanResult } from '../lib/apiClient'
@@ -13,6 +14,7 @@ export default function AppDetail() {
   const { appId } = useParams<{ appId: string }>()
   const navigate  = useNavigate()
   const app       = useApp(appId)
+  const queryClient = useQueryClient()
   const { data: build, isLoading: buildLoading } = useBuildStatus(appId)
   const { mutateAsync: saveApp }   = useSaveApp()
   const { mutateAsync: deleteApp } = useDeleteApp()
@@ -72,7 +74,14 @@ export default function AppDetail() {
   async function handleRebuild() {
     if (!app || !displayConfig) return
     setBuilding(true); setError('')
-    try { await triggerBuild(app.rowKey, displayConfig) }
+    try {
+      await triggerBuild(app.rowKey, displayConfig)
+      // Invalidate the cached build status so React Query discards any stale
+      // 'ready'/'failed' snapshot and immediately starts polling the new build.
+      // Without this, refetchInterval stays false (it stopped polling when the
+      // previous build reached a terminal state) and the UI shows stale data.
+      queryClient.invalidateQueries({ queryKey: ['buildStatus', appId] })
+    }
     catch (err: any) { setError(err.message) }
     finally { setBuilding(false) }
   }
@@ -119,6 +128,8 @@ export default function AppDetail() {
         configJson: JSON.stringify(rescanConfig),
       })
       await triggerBuild(app.rowKey, rescanConfig)
+      // Invalidate cached build status so UI starts polling the new build immediately.
+      queryClient.invalidateQueries({ queryKey: ['buildStatus', appId] })
       // Clear rescan state — build status card will update via polling
       setRescanResult(null)
       setRescanConfig(null)
