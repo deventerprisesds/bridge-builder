@@ -122,20 +122,39 @@ export interface ScanResult {
 export interface Channel {
   id: string
   name: string
+  description?: string
   deepLink: string
   importance: string
   sound: string
   repeatEnabled: boolean
 }
 
+/** Mirrors Kotlin NotificationsConfig */
+export interface NotificationsConfig {
+  channels: Channel[]
+}
+
+/** Mirrors Kotlin WidgetConfig */
+export interface WidgetConfig {
+  enabled: boolean
+  name: string
+  dataUrl: string
+  refreshMinutes: number
+  tapDeepLink: string
+}
+
+/**
+ * The canonical bridge.config.json shape — must match BridgeConfig.kt exactly
+ * so Gson deserialises every field without silent fallbacks.
+ */
 export interface BridgeConfig {
   appName: string
   baseUrl: string
   themeColor: string
   iconUrl?: string
   deepLinks: Record<string, string>
-  channels: Channel[]
-  widgetDataUrl?: string
+  notifications: NotificationsConfig
+  widget: WidgetConfig
   version?: string
 }
 

@@ -366,7 +366,7 @@ export default function AddApp() {
                 <span className="text-neutral-300 mx-1">·</span>
                 {Object.keys(config.deepLinks).length} deep links
                 <span className="text-neutral-300 mx-1">·</span>
-                {config.channels.length} notification channel{config.channels.length !== 1 ? 's' : ''}
+                {config.notifications.channels.length} notification channel{config.notifications.channels.length !== 1 ? 's' : ''}
               </div>
             </div>
 

@@ -1,4 +1,4 @@
-import { BridgeConfig, ScanResult, Channel } from '../lib/apiClient'
+import { BridgeConfig, ScanResult } from '../lib/apiClient'
 import { ChannelEditor } from './ChannelEditor'
 
 interface Props {
@@ -112,16 +112,71 @@ export function ConfigEditor({ config, confidence = {}, onChange }: Props) {
         )}
       </div>
 
-      {/* Widget Data URL */}
-      <div>
-        <FieldLabel confidence={confidence.widgetDataUrl}>Widget Data URL</FieldLabel>
-        <input
-          value={config.widgetDataUrl ?? ''}
-          onChange={e => set('widgetDataUrl', e.target.value)}
-          className="input font-mono"
-          placeholder="https://myapp.com/api/widget-data"
-        />
-        <p className="form-hint">Used for Android home-screen widget</p>
+      {/* Widget */}
+      <div className="space-y-3">
+        <p className="text-label-md font-medium text-neutral-700">Home Screen Widget</p>
+
+        <div className="flex items-center gap-3">
+          <div
+            onClick={() => set('widget', { ...config.widget, enabled: !config.widget.enabled })}
+            className={`relative cursor-pointer rounded-full transition-colors duration-200
+                        ${config.widget.enabled ? 'bg-brand-600' : 'bg-neutral-200'}`}
+            style={{ width: '32px', height: '18px', flexShrink: 0 }}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 bg-white rounded-full shadow-elevation-1
+                           transition-transform duration-200
+                           ${config.widget.enabled ? 'translate-x-3.5' : 'translate-x-0'}`}
+              style={{ width: '14px', height: '14px' }}
+            />
+          </div>
+          <span className="text-body-sm text-neutral-600">Enable widget</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <FieldLabel>Widget Name</FieldLabel>
+            <input
+              value={config.widget.name}
+              onChange={e => set('widget', { ...config.widget, name: e.target.value })}
+              className="input"
+              placeholder="My App"
+            />
+          </div>
+          <div>
+            <FieldLabel>Refresh (minutes)</FieldLabel>
+            <input
+              type="number"
+              min={5}
+              value={config.widget.refreshMinutes}
+              onChange={e => set('widget', { ...config.widget, refreshMinutes: parseInt(e.target.value) || 15 })}
+              className="input"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <FieldLabel confidence={confidence.widgetDataUrl}>Data URL</FieldLabel>
+            <input
+              value={config.widget.dataUrl}
+              onChange={e => set('widget', { ...config.widget, dataUrl: e.target.value })}
+              className="input font-mono"
+              placeholder="https://myapp.com/api/widget-data"
+            />
+            <p className="form-hint">API endpoint for widget content</p>
+          </div>
+          <div>
+            <FieldLabel>Tap Deep Link</FieldLabel>
+            <input
+              value={config.widget.tapDeepLink}
+              onChange={e => set('widget', { ...config.widget, tapDeepLink: e.target.value })}
+              className="input font-mono"
+              placeholder="/"
+            />
+            <p className="form-hint">Opens when widget is tapped</p>
+          </div>
+        </div>
       </div>
 
       {/* Divider */}
@@ -185,26 +240,34 @@ export function ConfigEditor({ config, confidence = {}, onChange }: Props) {
           Notification Channels
         </FieldLabel>
         <ChannelEditor
-          channels={config.channels}
+          channels={config.notifications.channels}
           deepLinks={config.deepLinks}
-          onChange={ch => set('channels', ch)}
+          onChange={ch => set('notifications', { ...config.notifications, channels: ch })}
         />
       </div>
     </div>
   )
 }
 
-/** Convert a ScanResult into an initial BridgeConfig */
+/** Convert a ScanResult into an initial BridgeConfig matching BridgeConfig.kt exactly */
 export function scanResultToConfig(scan: ScanResult, baseUrl: string): BridgeConfig {
   return {
-    appName:      scan.appName    ?? new URL(baseUrl).hostname,
+    appName:    scan.appName  ?? new URL(baseUrl).hostname,
     baseUrl,
-    themeColor:   scan.themeColor ?? '#1b4f5c',
-    iconUrl:      scan.iconUrl,
-    deepLinks:    scan.deepLinks  ?? { Home: '/' },
-    channels:     scan.suggestedChannels ?? [
-      { id: 'general', name: 'General', deepLink: '/', importance: 'default', sound: 'default', repeatEnabled: false },
-    ],
-    widgetDataUrl: scan.widgetDataUrlHint,
+    themeColor: scan.themeColor ?? '#1b4f5c',
+    iconUrl:    scan.iconUrl,
+    deepLinks:  scan.deepLinks  ?? { Home: '/' },
+    notifications: {
+      channels: scan.suggestedChannels ?? [
+        { id: 'general', name: 'General', deepLink: '/', importance: 'default', sound: 'default', repeatEnabled: false },
+      ],
+    },
+    widget: {
+      enabled:        false,
+      name:           scan.appName ?? new URL(baseUrl).hostname,
+      dataUrl:        scan.widgetDataUrlHint ?? '',
+      refreshMinutes: 15,
+      tapDeepLink:    '/',
+    },
   }
 }
