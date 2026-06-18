@@ -30,7 +30,7 @@ export default function AppDetail() {
   function parsedConfig(): BridgeConfig | null {
     if (!app) return null
     try { return JSON.parse(app.ConfigJson) as BridgeConfig }
-    catch { return { appName: app.AppName, baseUrl: app.BaseUrl, themeColor: app.ThemeColor || '#1b4f5c', deepLinks: {}, channels: [] } }
+    catch { return { appName: app.AppName, baseUrl: app.BaseUrl, themeColor: app.ThemeColor || '#1b4f5c', deepLinks: {}, notifications: { channels: [] }, widget: { enabled: false, name: '', dataUrl: '', refreshMinutes: 15, tapDeepLink: '/' } } }
   }
 
   const displayConfig = config ?? parsedConfig()
