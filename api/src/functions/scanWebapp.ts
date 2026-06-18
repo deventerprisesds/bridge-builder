@@ -18,14 +18,16 @@ const ANDROID_CAPABILITY_CHECKLIST = [
 
 // ── Content patterns that signal Android-relevant code ───────────────────────
 const CONTENT_PATTERNS = [
-  /useEffect/,       /Notification/i,   /addEventListener/,  /fetch\(/,
-  /supabase/i,       /channel/i,        /permission/i,       /schedule/i,
-  /push/i,           /email/i,          /reminder/i,         /alert/i,
-  /calendar/i,       /outlook/i,        /google/i,           /microsoft/i,
-  /slack/i,          /webhook/i,        /digest/i,           /toast/i,
-  /socket/i,         /realtime/i,       /voice/i,            /speech/i,
-  /microphone/i,     /cron/i,           /interval/i,         /worker/i,
-  /background/i,     /sync/i,           /widget/i,           /shortcut/i,
+  /useEffect/,            /Notification/i,        /addEventListener/,     /fetch\(/,
+  /supabase/i,            /channel/i,             /permission/i,          /schedule/i,
+  /push/i,                /email/i,               /reminder/i,            /alert/i,
+  /calendar/i,            /outlook/i,             /google/i,              /microsoft/i,
+  /slack/i,               /webhook/i,             /digest/i,              /toast/i,
+  /socket/i,              /realtime/i,            /voice/i,               /speech/i,
+  /microphone/i,          /cron/i,                /interval/i,            /worker/i,
+  /background/i,          /sync/i,                /widget/i,              /shortcut/i,
+  /useNotification/i,     /notificationSettings/i, /sendNotification/i,   /NotificationPreferences/i,
+  /\bnotify\b/i,
 ]
 
 // ── Priority files always included regardless of content score ───────────────
@@ -229,61 +231,82 @@ app.http('scanWebapp', {
 
         if (sourceContext) {
           const checklistJson = JSON.stringify(ANDROID_CAPABILITY_CHECKLIST, null, 2)
+          const userContent = `Webapp URL: ${url}\n\nFiles analysed: ${orderedPaths.length}\nTotal chars: ${totalChars}\n\nSource files:${sourceContext}`
 
-          const systemPrompt = `You are a senior Android engineer performing a capability audit for a WebView bridge app. Your job is to analyse the React/TypeScript source code provided and produce two things:
+          // ── CALL 1: Capability checklist + base config (no channel enumeration) ─
+          const capabilitySystemPrompt = `You are a senior Android engineer performing a capability audit for a WebView bridge app. Analyse the React/TypeScript source code and produce:
 
 1. A "capabilityReport" — a structured audit against the Android capability checklist below
-2. A "config" — a complete bridge.config.json
+2. A "config" — base config fields (appName, themeColor, voiceContextFound, routes, deepLinks, widgetDataUrlHint). DO NOT include suggestedChannels here — channels are handled separately.
 
 ## ANDROID CAPABILITY CHECKLIST
 ${checklistJson}
 
-For EVERY item in the checklist, your capabilityReport MUST contain exactly one entry. No item may be omitted. Each entry must have:
+For EVERY item in the checklist, your capabilityReport MUST contain exactly one entry. No item may be omitted. Each entry:
 - "checklistId": the id from the checklist
-- "verdict": exactly one of:
-  - "satisfied" — found code evidence this capability maps to existing webapp behaviour
-  - "applicable_not_implemented" — webapp domain implies this should exist but no implementation found (flag as a gap)
-  - "not_applicable" — this capability has no relevance to this webapp
-- "finding": plain English description of what you found (or didn't find)
-- "file": the source file where you found the relevant code (or "" if not found)
+- "verdict": "satisfied" | "applicable_not_implemented" | "not_applicable"
+- "finding": plain English of what you found (or didn't)
+- "file": source file containing evidence (or "")
 - "line": approximate line number (0 if unknown)
-- "currentBehaviour": what the webapp currently does for this (e.g. "sends email via Supabase edge function notify-user")
-- "androidMapping": what Android native feature this should use (e.g. "FCM push via FirebaseMessagingService")
+- "currentBehaviour": what the webapp currently does for this
+- "androidMapping": what Android native feature this should use
 - "confidence": "found" | "inferred" | "default"
 
 ## CONFIG RULES
 appName: Real product name. NEVER "Vite App", "Vite + React", "React App".
 themeColor: Primary/brand hex from tailwind config or CSS variables. NOT #000 or #fff.
 routes + deepLinks: Map EVERY route path to a human-readable name.
-channels: One channel per distinct notification type found. For each:
-  - importance "high" for time-sensitive (reminders, overdue, calendar)
-  - repeatEnabled true for recurring (digests, scheduled reminders)
-  - sound "none" for silent digest/informational channels
 voiceContextFound: true if ANY SpeechRecognition, SpeechSynthesis, Web Speech API, or microphone code exists.
 widgetDataUrlHint: Best API endpoint for a home screen summary widget.
 
 ## RESPONSE FORMAT
-Return ONLY valid JSON, no markdown, no extra keys:
+Return ONLY valid JSON:
 {
-  "capabilityReport": [
-    {
-      "checklistId": string,
-      "verdict": "satisfied"|"applicable_not_implemented"|"not_applicable",
-      "finding": string,
-      "file": string,
-      "line": number,
-      "currentBehaviour": string,
-      "androidMapping": string,
-      "confidence": "found"|"inferred"|"default"
-    }
-  ],
+  "capabilityReport": [ { "checklistId": string, "verdict": string, "finding": string, "file": string, "line": number, "currentBehaviour": string, "androidMapping": string, "confidence": string } ],
   "config": {
     "appName": string,
     "themeColor": string,
     "voiceContextFound": boolean,
     "routes": string[],
     "deepLinks": { [humanName: string]: string },
-    "suggestedChannels": [{
+    "widgetDataUrlHint": string,
+    "confidence": { [field: string]: "found"|"inferred"|"default" }
+  }
+}`
+
+          // ── CALL 2: Dedicated channel enumeration with full token budget ───────
+          const channelSystemPrompt = `You are a notification-systems specialist analysing a React/TypeScript webapp to enumerate every distinct notification channel for an Android app.
+
+Your ONLY job: find every distinct notification type this app sends or receives, and return them as a JSON array.
+
+## WHERE TO LOOK (search all of these exhaustively):
+
+1. **Settings UI toggles** — any checkbox, toggle, or preference labelled with notification types (e.g. "Enable task reminders", "Daily digest", "Overdue alerts")
+2. **Supabase function names** in fetch() / supabase.functions.invoke() calls — function names like "notify-user", "send-reminder", "task-overdue-alert" reveal channel types
+3. **Notification type enums/constants** — any TypeScript enum, const object, or union type containing notification category names
+4. **Email/webhook service imports and calls** — sendgrid, resend, mailgun, twilio, slack webhook calls reveal notification domains
+5. **Notification-category-like strings** — string literals containing words like "reminder", "overdue", "digest", "alert", "update", "summary", "mention", "assignment"
+6. **useNotification hooks, notificationSettings components, sendNotification functions, NotificationPreferences pages** — these contain the definitive channel list
+7. **Supabase table names or RLS policies** — tables like "notifications", "notification_preferences" with category columns
+
+## OUTPUT RULES
+- Return ONE channel per distinct notification type. If you see "task reminders" and "overdue tasks" they are separate channels.
+- id: lowercase-kebab-case
+- name: Human-readable, title case (e.g. "Task Reminders", "Overdue Alerts")
+- deepLink: The route in the app most relevant to this notification (e.g. "/tasks", "/calendar")
+- importance: "high" for time-sensitive (reminders, overdue, urgent); "default" for standard; "low" for informational
+- sound: "none" for silent digest/summary channels; "default" for all others
+- repeatEnabled: true for recurring/scheduled notifications (digests, daily summaries, recurring reminders)
+- description: one sentence describing when this notification fires
+
+If you find NO notification infrastructure at all, return an empty array [].
+Do NOT invent channels not evidenced in the code.
+
+## RESPONSE FORMAT
+Return ONLY valid JSON — an object with one key:
+{
+  "suggestedChannels": [
+    {
       "id": string,
       "name": string,
       "deepLink": string,
@@ -291,39 +314,51 @@ Return ONLY valid JSON, no markdown, no extra keys:
       "sound": "default"|"none",
       "repeatEnabled": boolean,
       "description": string
-    }],
-    "widgetDataUrlHint": string,
-    "confidence": { [field: string]: "found"|"inferred"|"default" }
-  }
+    }
+  ]
 }`
 
-          const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${keys.openAiKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model: 'gpt-4o',
-              response_format: { type: 'json_object' },
-              max_tokens: 8000,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: `Webapp URL: ${url}\n\nFiles analysed: ${orderedPaths.length}\nTotal chars: ${totalChars}\n\nSource files:${sourceContext}` }
-              ]
-            })
-          }).then(r => r.json()) as any
+          // Fire both calls in parallel
+          const [capabilityRaw, channelRaw] = await Promise.all([
+            fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${keys.openAiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: 'gpt-4o',
+                response_format: { type: 'json_object' },
+                max_tokens: 8000,
+                messages: [
+                  { role: 'system', content: capabilitySystemPrompt },
+                  { role: 'user', content: userContent }
+                ]
+              })
+            }).then(r => r.json()) as Promise<any>,
 
+            fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${keys.openAiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: 'gpt-4o',
+                response_format: { type: 'json_object' },
+                max_tokens: 4000,
+                messages: [
+                  { role: 'system', content: channelSystemPrompt },
+                  { role: 'user', content: userContent }
+                ]
+              })
+            }).then(r => r.json()) as Promise<any>,
+          ])
+
+          const genericNames = ['vite app', 'vite + react', 'react app', 'my app']
+
+          // Process call 1: capability report + base config
           try {
-            const aiResult = JSON.parse(aiResponse.choices[0].message.content)
-
-            // Extract capabilityReport
-            if (Array.isArray(aiResult.capabilityReport)) {
-              result.capabilityReport = aiResult.capabilityReport
+            const cap = JSON.parse(capabilityRaw.choices[0].message.content)
+            if (Array.isArray(cap.capabilityReport)) {
+              result.capabilityReport = cap.capabilityReport
             }
-
-            // Merge config fields
-            const aiConfig = aiResult.config ?? aiResult  // fallback if model returned flat object
+            const aiConfig = cap.config ?? cap
             const aiConfidence = aiConfig.confidence ?? {}
-            const genericNames = ['vite app', 'vite + react', 'react app', 'my app']
-
             for (const [k, v] of Object.entries(aiConfig)) {
               if (k === 'confidence') continue
               if (k === 'appName' && result.confidence.appName === 'found') continue
@@ -332,9 +367,55 @@ Return ONLY valid JSON, no markdown, no extra keys:
               result[k] = v
               result.confidence[k] = aiConfidence[k] ?? 'inferred'
             }
-          } catch (parseErr) {
-            // AI response parse error — log and continue with rule-based results
-            result.scanError = `AI parse failed: ${aiResponse.choices?.[0]?.finish_reason ?? 'unknown'}`
+          } catch {
+            result.scanError = `Capability parse failed: ${capabilityRaw.choices?.[0]?.finish_reason ?? 'unknown'}`
+          }
+
+          // Process call 2: channels
+          try {
+            const ch = JSON.parse(channelRaw.choices[0].message.content)
+            if (Array.isArray(ch.suggestedChannels) && ch.suggestedChannels.length > 0) {
+              result.suggestedChannels = ch.suggestedChannels
+              result.confidence.suggestedChannels = 'found'
+            }
+          } catch {
+            // channel parse failure is non-fatal — fall through to seeding logic below
+          }
+
+          // ── Suggested-channel seeding ─────────────────────────────────────
+          // When notification infrastructure is detected but scanner found < 3 channels,
+          // pre-populate a curated set of common channel types as a starting point.
+          const hasNotifInfra = (result.capabilityReport ?? []).some(
+            (r: any) => r.checklistId === 'push_notifications' && r.verdict === 'satisfied'
+          ) || (result.capabilityReport ?? []).some(
+            (r: any) => r.checklistId === 'notification_channels' && r.verdict !== 'not_applicable'
+          )
+
+          if (hasNotifInfra && (!result.suggestedChannels || result.suggestedChannels.length < 3)) {
+            const seeded = result.suggestedChannels ?? []
+            const seededIds = new Set(seeded.map((c: any) => c.id))
+
+            const SEED_CHANNELS = [
+              { id: 'push',      name: 'Push Notifications', deepLink: '/',          importance: 'high',    sound: 'default', repeatEnabled: false, description: 'Real-time push alerts from the app' },
+              { id: 'reminders', name: 'Reminders',          deepLink: '/',          importance: 'high',    sound: 'default', repeatEnabled: true,  description: 'Scheduled reminders and due-date alerts' },
+              { id: 'overdue',   name: 'Overdue Alerts',     deepLink: '/',          importance: 'high',    sound: 'default', repeatEnabled: false, description: 'Alerts for overdue tasks or items' },
+              { id: 'calendar',  name: 'Calendar Events',    deepLink: '/calendar',  importance: 'high',    sound: 'default', repeatEnabled: false, description: 'Upcoming calendar event notifications' },
+              { id: 'digest',    name: 'Daily Digest',       deepLink: '/',          importance: 'default', sound: 'none',    repeatEnabled: true,  description: 'Daily summary of activity and progress' },
+              { id: 'in-app',    name: 'In-App Alerts',      deepLink: '/',          importance: 'default', sound: 'default', repeatEnabled: false, description: 'General in-app notifications and updates' },
+              { id: 'email',     name: 'Email Notifications',deepLink: '/',          importance: 'low',     sound: 'none',    repeatEnabled: false, description: 'Mirrors of email notifications sent by the app' },
+              { id: 'slack',     name: 'Slack Updates',      deepLink: '/',          importance: 'default', sound: 'none',    repeatEnabled: false, description: 'Notifications mirrored from Slack integration' },
+            ]
+
+            for (const seed of SEED_CHANNELS) {
+              if (!seededIds.has(seed.id) && seeded.length < 8) {
+                seeded.push(seed)
+              }
+            }
+
+            result.suggestedChannels = seeded
+            if (result.confidence.suggestedChannels !== 'found') {
+              result.confidence.suggestedChannels = 'inferred'
+            }
           }
         }
       }
