@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { useApp, useSaveApp, useDeleteApp } from '../hooks/useApps'
 import { useBuildStatus } from '../hooks/useBuildStatus'
-import { triggerBuild, scanWebapp, BridgeConfig, ScanResult } from '../lib/apiClient'
+import { triggerBuild, scanWebapp, listAppBuilds, BridgeConfig, ScanResult, ApkBuild } from '../lib/apiClient'
 import { ConfigEditor, scanResultToConfig } from '../components/ConfigEditor'
 import { CapabilityReport } from '../components/CapabilityReport'
 import { BuildStatusBadge } from '../components/BuildStatusBadge'
@@ -18,6 +19,15 @@ export default function AppDetail() {
   const { data: build, isLoading: buildLoading } = useBuildStatus(appId)
   const { mutateAsync: saveApp }   = useSaveApp()
   const { mutateAsync: deleteApp } = useDeleteApp()
+
+  // ── Build history ─────────────────────────────────────────────────────────
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const { data: historyData, isLoading: historyLoading } = useQuery({
+    queryKey: ['appBuilds', appId],
+    queryFn:  () => listAppBuilds(appId!),
+    enabled:  !!appId && historyOpen,
+    staleTime: 60_000,   // blob listing is cheap but not free; cache for 1 min
+  })
 
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -410,6 +420,92 @@ export default function AppDetail() {
                   Re-scan &amp; configure
                 </button>
               </div>
+            </section>
+
+            {/* ── Previous builds ────────────────────────────────────── */}
+            <section className="card rounded-lg overflow-hidden">
+              <button
+                onClick={() => setHistoryOpen(o => !o)}
+                className="w-full flex items-center justify-between px-5 py-4
+                           text-left hover:bg-neutral-50 transition-colors duration-150"
+              >
+                <span className="text-label-md font-semibold text-neutral-900">
+                  Previous builds
+                </span>
+                <svg
+                  className={`w-4 h-4 text-neutral-400 transition-transform duration-200
+                              ${historyOpen ? 'rotate-180' : ''}`}
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {historyOpen && (
+                <div className="border-t border-neutral-100">
+                  {historyLoading && (
+                    <div className="px-5 py-4 space-y-2">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="flex items-center gap-3">
+                          <div className="skeleton h-4 w-40 rounded" />
+                          <div className="skeleton h-4 w-24 rounded" />
+                          <div className="skeleton h-4 w-20 rounded ml-auto" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {!historyLoading && (!historyData?.builds || historyData.builds.length === 0) && (
+                    <p className="px-5 py-4 text-body-sm text-neutral-400">
+                      No APKs found in storage for this app.
+                    </p>
+                  )}
+
+                  {!historyLoading && historyData?.builds && historyData.builds.length > 0 && (
+                    <ul className="divide-y divide-neutral-100">
+                      {historyData.builds.map((b: ApkBuild) => (
+                        <li key={b.blobPath}
+                          className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50
+                                     transition-colors duration-100">
+                          {/* APK icon */}
+                          <svg className="w-4 h-4 text-neutral-300 flex-shrink-0"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round"
+                              d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 8.25h3m-3 3h3m-3 3h.75" />
+                          </svg>
+
+                          {/* Name + date */}
+                          <div className="flex-1 min-w-0">
+                            <span className="text-body-sm font-mono text-neutral-700 truncate block">
+                              {b.name}
+                            </span>
+                            <span className="text-caption-md text-neutral-400">
+                              {new Date(b.lastModified).toLocaleString()}
+                              {' · '}
+                              {(b.sizeBytes / 1_048_576).toFixed(1)} MB
+                            </span>
+                          </div>
+
+                          {/* Download */}
+                          <a
+                            href={b.downloadUrl}
+                            download={b.name}
+                            className="btn-secondary py-1 px-3 text-caption-md flex-shrink-0
+                                       flex items-center gap-1.5"
+                          >
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24"
+                              stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round"
+                                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg>
+                            Download
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </section>
 
             {/* Config card */}

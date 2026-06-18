@@ -66,6 +66,9 @@ export const getBuildStatus = (appId: string, jobId?: string) => {
   return request<BuildJob>('GET', `/getBuildStatus?${qs}`)
 }
 
+export const listAppBuilds = (appId: string) =>
+  request<{ builds: ApkBuild[] }>('GET', `/listAppBuilds?appId=${appId}`)
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface App {
   rowKey: string
@@ -169,4 +172,12 @@ export interface BuildJob {
   StartedAt: string
   CompletedAt?: string
   downloadUrl?: string
+}
+
+export interface ApkBuild {
+  name: string          // filename e.g. "journey-voice-v1.0.25.apk"
+  blobPath: string      // full blob path e.g. "54beaa01.../journey-voice-v1.0.25.apk"
+  sizeBytes: number
+  lastModified: string  // ISO 8601
+  downloadUrl: string   // 30-day SAS URL
 }
