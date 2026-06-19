@@ -1,6 +1,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { verifyToken } from '../lib/auth'
 import { getTable } from '../lib/tableStorage'
+import { sanitizeThemeColor, sanitizeConfigJson } from '../lib/colorUtils'
 
 app.http('saveApp', {
   methods: ['POST', 'PUT'],
@@ -36,8 +37,8 @@ app.http('saveApp', {
           BaseUrl:       body.baseUrl,
           GithubRepoUrl: body.githubRepoUrl ?? '',
           IconUrl:       body.iconUrl ?? '',
-          ThemeColor:    body.themeColor ?? '#1e40af',
-          ConfigJson:    body.configJson ?? '',
+          ThemeColor:    sanitizeThemeColor(body.themeColor),
+          ConfigJson:    sanitizeConfigJson(body.configJson),
           CreatedAt:     createdAt,
           UpdatedAt:     now
         },

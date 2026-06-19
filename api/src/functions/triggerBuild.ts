@@ -2,6 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { verifyToken } from '../lib/auth'
 import { getUserKeys, getTable } from '../lib/tableStorage'
 import { getOctokit, parseRepo, upsertFile } from '../lib/githubClient'
+import { sanitizeThemeColor } from '../lib/colorUtils'
 
 app.http('triggerBuild', {
   methods: ['POST'],
@@ -10,6 +11,10 @@ app.http('triggerBuild', {
     try {
       const subjectId = await verifyToken(req)
       const { appId, config } = await req.json() as { appId: string; config: Record<string, any> }
+      // Sanitize themeColor before it reaches the GitHub commit or Table Storage.
+      // This is the last line of defense: even if the client sends a CSS expression
+      // (e.g. from stale Table Storage data loaded pre-fix), it cannot reach the APK build.
+      config.themeColor = sanitizeThemeColor(config.themeColor)
       const keys = await getUserKeys(subjectId)
 
       if (!keys.githubToken) {
