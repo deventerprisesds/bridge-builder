@@ -10,6 +10,7 @@ import { CapabilityReport } from '../components/CapabilityReport'
 import { BuildStatusBadge } from '../components/BuildStatusBadge'
 import { ApkDownloadButton } from '../components/ApkDownloadButton'
 import { ScanProgress } from '../components/ScanProgress'
+import { relativeTime, exactTime } from '../lib/timeUtils'
 
 export default function AppDetail() {
   const { appId } = useParams<{ appId: string }>()
@@ -31,8 +32,13 @@ export default function AppDetail() {
 
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
-    if (build?.Status !== 'building' && build?.Status !== 'pending') return
-    const t = setInterval(() => setNow(Date.now()), 1000)
+    // 1-second tick while a build is in progress (drives the elapsed counter)
+    if (build?.Status === 'building' || build?.Status === 'pending') {
+      const t = setInterval(() => setNow(Date.now()), 1000)
+      return () => clearInterval(t)
+    }
+    // 30-second tick otherwise so "X min ago" labels stay fresh on completed builds
+    const t = setInterval(() => setNow(Date.now()), 30_000)
     return () => clearInterval(t)
   }, [build?.Status])
 
@@ -358,6 +364,8 @@ export default function AppDetail() {
                         v{build.ApkVersion}
                       </span>
                     )}
+
+                    {/* In-progress: live elapsed counter */}
                     {build.StartedAt && (build.Status === 'building' || build.Status === 'pending') && (() => {
                       const elapsed = Math.floor((now - new Date(build.StartedAt).getTime()) / 1000)
                       const m = Math.floor(elapsed / 60), s = elapsed % 60
@@ -367,11 +375,21 @@ export default function AppDetail() {
                         </span>
                       )
                     })()}
-                    {build.StartedAt && build.Status !== 'building' && build.Status !== 'pending' && (
-                      <span className="text-caption-md text-neutral-400">
-                        Started {new Date(build.StartedAt).toLocaleString()}
-                      </span>
-                    )}
+
+                    {/* Completed/failed: relative completion time with exact on hover */}
+                    {(build.Status === 'ready' || build.Status === 'failed') && (() => {
+                      const ts = build.CompletedAt ?? build.StartedAt
+                      return ts ? (
+                        <time
+                          dateTime={ts}
+                          title={exactTime(ts)}
+                          className="text-caption-md text-neutral-500 cursor-default"
+                        >
+                          {relativeTime(ts)}
+                        </time>
+                      ) : null
+                    })()}
+
                     {build.GithubRunId && (
                       <a
                         href={`https://github.com/deventerprisesds/android-bridge-template/actions/runs/${build.GithubRunId}`}
@@ -432,13 +450,35 @@ export default function AppDetail() {
                 <span className="text-label-md font-semibold text-neutral-900">
                   Previous builds
                 </span>
-                <svg
-                  className={`w-4 h-4 text-neutral-400 transition-transform duration-200
-                              ${historyOpen ? 'rotate-180' : ''}`}
-                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
+                <div className="flex items-center gap-3">
+                  {/* Storage link — derived from first build's blob URL once loaded */}
+                  {historyData?.builds?.[0]?.downloadUrl && (() => {
+                    try {
+                      const u = new URL(historyData.builds[0].downloadUrl)
+                      const storageUrl = `${u.origin}/bridge-apks/${appId}/`
+                      return (
+                        <a
+                          href={storageUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          title={storageUrl}
+                          className="text-caption-md text-brand-600 hover:text-brand-700
+                                     hover:underline font-medium"
+                        >
+                          Browse storage ↗
+                        </a>
+                      )
+                    } catch { return null }
+                  })()}
+                  <svg
+                    className={`w-4 h-4 text-neutral-400 transition-transform duration-200
+                                ${historyOpen ? 'rotate-180' : ''}`}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </button>
 
               {historyOpen && (
@@ -463,10 +503,10 @@ export default function AppDetail() {
 
                   {!historyLoading && historyData?.builds && historyData.builds.length > 0 && (
                     <ul className="divide-y divide-neutral-100">
-                      {historyData.builds.map((b: ApkBuild) => (
+                      {historyData.builds.map((b: ApkBuild, idx: number) => (
                         <li key={b.blobPath}
-                          className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50
-                                     transition-colors duration-100">
+                          className={`flex items-center gap-3 px-5 py-3 transition-colors duration-100
+                                      ${idx === 0 ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-neutral-50'}`}>
                           {/* APK icon */}
                           <svg className="w-4 h-4 text-neutral-300 flex-shrink-0"
                             fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -474,16 +514,29 @@ export default function AppDetail() {
                               d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 8.25h3m-3 3h3m-3 3h.75" />
                           </svg>
 
-                          {/* Name + date */}
+                          {/* Name + relative date */}
                           <div className="flex-1 min-w-0">
-                            <span className="text-body-sm font-mono text-neutral-700 truncate block">
-                              {b.name}
-                            </span>
-                            <span className="text-caption-md text-neutral-400">
-                              {new Date(b.lastModified).toLocaleString()}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-body-sm font-mono text-neutral-700 truncate">
+                                {b.name}
+                              </span>
+                              {idx === 0 && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded
+                                                 text-caption-md font-medium
+                                                 bg-success text-white flex-shrink-0">
+                                  Latest
+                                </span>
+                              )}
+                            </div>
+                            <time
+                              dateTime={b.lastModified}
+                              title={exactTime(b.lastModified)}
+                              className="text-caption-md text-neutral-400 cursor-default"
+                            >
+                              {relativeTime(b.lastModified)}
                               {' · '}
                               {(b.sizeBytes / 1_048_576).toFixed(1)} MB
-                            </span>
+                            </time>
                           </div>
 
                           {/* Download */}

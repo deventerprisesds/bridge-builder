@@ -1,12 +1,18 @@
 import { BuildJob } from '../lib/apiClient'
+import { relativeTime, exactTime } from '../lib/timeUtils'
 
 export function ApkDownloadButton({ job }: { job?: BuildJob }) {
   if (!job || job.Status !== 'ready' || !job.downloadUrl) return null
+
+  const versionPart = job.ApkVersion ? `v${job.ApkVersion}` : null
+  const timePart    = relativeTime(job.CompletedAt ?? job.StartedAt)
+  const label       = [versionPart, timePart].filter(Boolean).join(' — ')
 
   return (
     <a
       href={job.downloadUrl}
       download
+      title={exactTime(job.CompletedAt ?? job.StartedAt)}
       className="inline-flex items-center gap-2
                  rounded-md bg-success px-4 py-2
                  text-label-md font-medium text-white
@@ -19,7 +25,7 @@ export function ApkDownloadButton({ job }: { job?: BuildJob }) {
         <path strokeLinecap="round" strokeLinejoin="round"
           d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
       </svg>
-      Download APK{job.ApkVersion ? ` — v${job.ApkVersion}` : ''}
+      Download APK{label ? ` (${label})` : ''}
     </a>
   )
 }
