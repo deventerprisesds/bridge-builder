@@ -29,22 +29,27 @@ export async function uploadApk(blobPath: string, data: Buffer): Promise<void> {
 }
 
 export function generateSasUrl(blobPath: string): string {
-  const accountName = conn.match(/AccountName=([^;]+)/)?.[1] ?? ''
-  const accountKey  = conn.match(/AccountKey=([^;]+)/)?.[1] ?? ''
-  const sharedKey   = new StorageSharedKeyCredential(accountName, accountKey)
+  try {
+    const accountName = conn.match(/AccountName=([^;]+)/)?.[1] ?? ''
+    const accountKey  = conn.match(/AccountKey=([^;]+)/)?.[1] ?? ''
+    const sharedKey   = new StorageSharedKeyCredential(accountName, accountKey)
 
-  const expiry = new Date()
-  expiry.setDate(expiry.getDate() + 30)
+    const expiry = new Date()
+    expiry.setDate(expiry.getDate() + 30)
 
-  const sas = generateBlobSASQueryParameters(
-    {
-      containerName: CONTAINER,
-      blobName: blobPath,
-      permissions: BlobSASPermissions.parse('r'),
-      expiresOn: expiry
-    },
-    sharedKey
-  ).toString()
+    const sas = generateBlobSASQueryParameters(
+      {
+        containerName: CONTAINER,
+        blobName: blobPath,
+        permissions: BlobSASPermissions.parse('r'),
+        expiresOn: expiry
+      },
+      sharedKey
+    ).toString()
 
-  return `https://${accountName}.blob.core.windows.net/${CONTAINER}/${blobPath}?${sas}`
+    return `https://${accountName}.blob.core.windows.net/${CONTAINER}/${blobPath}?${sas}`
+  } catch (e) {
+    console.error('[generateSasUrl] Failed to generate SAS URL for', blobPath, e)
+    return ''
+  }
 }
