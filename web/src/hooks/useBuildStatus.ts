@@ -6,6 +6,7 @@ export function useBuildStatus(appId: string | undefined, jobId?: string) {
     queryKey: ['buildStatus', appId, jobId],
     queryFn: () => getBuildStatus(appId!, jobId),
     enabled: !!appId,
+    staleTime: 0,
     refetchInterval: (query) => {
       const data = query.state.data
       if (!data) return 5_000

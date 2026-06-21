@@ -13,6 +13,7 @@ export default function BuildHistory() {
     queryKey: ['buildStatus', appId],
     queryFn:  () => getBuildStatus(appId!),
     enabled:  !!appId,
+    staleTime: 0,
   })
 
   return (
