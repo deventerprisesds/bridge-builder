@@ -21,14 +21,22 @@ export default function AppDetail() {
   const { mutateAsync: saveApp }   = useSaveApp()
   const { mutateAsync: deleteApp } = useDeleteApp()
 
-  // ── Build history ─────────────────────────────────────────────────────────
+  // ── Build history — blob storage is source of truth for downloads ────────
   const [historyOpen, setHistoryOpen] = useState(false)
-  const { data: historyData, isLoading: historyLoading } = useQuery({
+  const { data: historyData, isLoading: historyLoading, isError: historyError, error: historyFetchError } = useQuery({
     queryKey: ['appBuilds', appId],
     queryFn:  () => listAppBuilds(appId!),
-    enabled:  !!appId && historyOpen,
-    staleTime: 60_000,   // blob listing is cheap but not free; cache for 1 min
+    enabled:  !!appId,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: (query) => {
+      // Poll while a build is in progress so the new APK appears automatically
+      if (build?.Status === 'building' || build?.Status === 'pending') return 10_000
+      return false
+    },
   })
+  // Latest APK from blob storage — used for the primary download button
+  const latestBlob = historyData?.builds?.[0] ?? null
 
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -407,7 +415,21 @@ export default function AppDetail() {
                     </div>
                   )}
 
-                  <ApkDownloadButton job={build} />
+                  {/* Download from blob storage — always reflects the latest uploaded APK */}
+                  {latestBlob?.downloadUrl ? (
+                    <a
+                      href={latestBlob.downloadUrl}
+                      download
+                      className="btn-primary inline-flex items-center gap-2 py-2 px-4 text-body-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download APK ({latestBlob.name} — {relativeTime(latestBlob.lastModified)})
+                    </a>
+                  ) : (
+                    <ApkDownloadButton job={build} />
+                  )}
                 </div>
               )}
 
@@ -495,7 +517,12 @@ export default function AppDetail() {
                     </div>
                   )}
 
-                  {!historyLoading && (!historyData?.builds || historyData.builds.length === 0) && (
+                  {historyError && (
+                    <p className="px-5 py-4 text-body-sm text-red-500">
+                      Failed to load builds: {(historyFetchError as Error)?.message ?? 'Unknown error'}
+                    </p>
+                  )}
+                  {!historyLoading && !historyError && (!historyData?.builds || historyData.builds.length === 0) && (
                     <p className="px-5 py-4 text-body-sm text-neutral-400">
                       No APKs found in storage for this app.
                     </p>
