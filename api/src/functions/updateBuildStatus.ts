@@ -37,21 +37,40 @@ app.http('updateBuildStatus', {
     }
 
     const job = jobs[0]
-    if (!job) return { status: 404, jsonBody: { error: 'Job not found' } }
 
-    await client.updateEntity(
-      {
-        partitionKey: job.partitionKey as string,
-        rowKey: job.rowKey as string,
-        Status: status,
-        ...(githubRunId  && { GithubRunId:   githubRunId }),
-        ...(apkBlobPath  && { ApkBlobPath:   apkBlobPath }),
-        ...(apkVersion   && { ApkVersion:    apkVersion }),
-        ...(errorMessage && { ErrorMessage:  errorMessage }),
-        ...(completedAt  && { CompletedAt:   completedAt })
-      },
-      'Merge'
-    )
+    if (job) {
+      await client.updateEntity(
+        {
+          partitionKey: job.partitionKey as string,
+          rowKey: job.rowKey as string,
+          Status: status,
+          ...(githubRunId  && { GithubRunId:   githubRunId }),
+          ...(apkBlobPath  && { ApkBlobPath:   apkBlobPath }),
+          ...(apkVersion   && { ApkVersion:    apkVersion }),
+          ...(errorMessage && { ErrorMessage:  errorMessage }),
+          ...(completedAt  && { CompletedAt:   completedAt })
+        },
+        'Merge'
+      )
+    } else {
+      // Push-triggered build — no UI job record exists, create one now
+      const ciPartitionKey = subjectId ?? `ci:${appId}`
+      await client.upsertEntity(
+        {
+          partitionKey: ciPartitionKey,
+          rowKey: githubRunId ?? `push-${Date.now()}`,
+          AppId:        appId,
+          Status:       status,
+          StartedAt:    completedAt ?? new Date().toISOString(),
+          ...(githubRunId  && { GithubRunId:   githubRunId }),
+          ...(apkBlobPath  && { ApkBlobPath:   apkBlobPath }),
+          ...(apkVersion   && { ApkVersion:    apkVersion }),
+          ...(errorMessage && { ErrorMessage:  errorMessage }),
+          ...(completedAt  && { CompletedAt:   completedAt })
+        },
+        'Replace'
+      )
+    }
 
     return { status: 200, jsonBody: { updated: true } }
   }
