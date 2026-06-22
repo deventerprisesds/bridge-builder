@@ -15,9 +15,12 @@ app.http('getBuildStatus', {
       const client = getTable('BridgeBuildJobs')
       const jobs: any[] = []
 
+      // For a specific job (jobId), scope to the user's partition.
+      // For latest-build polling (no jobId), query by AppId only — push-triggered
+      // CI builds land on partition "ci:<appId>", not the user's subjectId partition.
       const filter = jobId
         ? `PartitionKey eq '${subjectId}' and RowKey eq '${jobId}'`
-        : `PartitionKey eq '${subjectId}' and AppId eq '${appId}'`
+        : `AppId eq '${appId}'`
 
       for await (const entity of client.listEntities({ queryOptions: { filter } })) {
         jobs.push(entity)
