@@ -7,11 +7,6 @@ export function useBuildStatus(appId: string | undefined, jobId?: string) {
     queryFn: () => getBuildStatus(appId!, jobId),
     enabled: !!appId,
     staleTime: 0,
-    refetchInterval: (query) => {
-      const data = query.state.data
-      if (!data) return 5_000
-      if (data.Status === 'ready' || data.Status === 'failed') return false
-      return 5_000
-    }
+    refetchInterval: 5_000
   })
 }
