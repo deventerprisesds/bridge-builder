@@ -24,11 +24,14 @@ app.http('triggerBuild', {
       const octokit = getOctokit(keys.githubToken)
       const { owner, repo } = parseRepo(process.env.GITHUB_TEMPLATE_REPO!)
 
-      // Commit bridge.config.json to the template repo to trigger CI
+      // Commit bridge.config.json to the template repo to trigger CI.
+      // _buildTriggeredAt ensures the file content always changes even when the
+      // user config is unchanged — GitHub Actions only fires on real file diffs.
       const path = `configs/${appId}/bridge.config.json`
+      const fileContent = JSON.stringify({ ...config, _buildTriggeredAt: new Date().toISOString() }, null, 2)
       await upsertFile(
         octokit, owner, repo, path,
-        JSON.stringify(config, null, 2),
+        fileContent,
         `Build: ${config.appName} [${new Date().toISOString()}]`
       )
 
