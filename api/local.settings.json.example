@@ -10,6 +10,8 @@
     "ENTRA_CLIENT_ID": "59465948-6e95-4124-984e-a43acade2fa9",
     "ENTRA_CLIENT_SECRET": "nCY8Q~m5xpJOVEVAk1EBqKjGFgwHEhtcbEm_WaeO",
     "ALLOWED_USER_EMAIL": "dev@enterpriseds.io",
-    "GITHUB_TEMPLATE_REPO": "deventerprisesds/android-bridge-template"
+    "GITHUB_TEMPLATE_REPO": "deventerprisesds/android-bridge-template",
+    "SUPABASE_URL": "https://<project-id>.supabase.co",
+    "SUPABASE_SERVICE_ROLE_KEY": "<your-service-role-key>"
   }
 }
