@@ -1,7 +1,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions'
 import { verifyToken } from '../lib/auth'
 import { getUserKeys, getTable } from '../lib/tableStorage'
-import { getOctokit, parseRepo, upsertFile } from '../lib/githubClient'
+import { getOctokit, parseRepo, upsertFile, fetchFile } from '../lib/githubClient'
 import { sanitizeThemeColor } from '../lib/colorUtils'
 
 app.http('triggerBuild', {
@@ -24,11 +24,27 @@ app.http('triggerBuild', {
       const octokit = getOctokit(keys.githubToken)
       const { owner, repo } = parseRepo(process.env.GITHUB_TEMPLATE_REPO!)
 
-      // Commit bridge.config.json to the template repo to trigger CI.
+      // Fetch existing config and merge so that manually-added keys (e.g. scheduleWidget,
+      // prioritiesWidget, voice) are preserved when a rebuild is triggered from the UI.
+      // UI-supplied keys take precedence over existing values.
+      // CI-owned metadata keys are stripped from the base so CI continues to own them.
+      const path = `configs/${appId}/bridge.config.json`
+      let baseConfig: Record<string, any> = {}
+      const existingRaw = await fetchFile(octokit, owner, repo, path)
+      if (existingRaw) {
+        try {
+          const parsed = JSON.parse(existingRaw)
+          const { _buildTriggeredAt: _a, _apkVersion: _b, _apkDownloadUrl: _c, ...rest } = parsed
+          baseConfig = rest
+        } catch { /* ignore malformed existing file */ }
+      }
+
       // _buildTriggeredAt ensures the file content always changes even when the
       // user config is unchanged — GitHub Actions only fires on real file diffs.
-      const path = `configs/${appId}/bridge.config.json`
-      const fileContent = JSON.stringify({ ...config, _buildTriggeredAt: new Date().toISOString() }, null, 2)
+      const fileContent = JSON.stringify(
+        { ...baseConfig, ...config, _buildTriggeredAt: new Date().toISOString() },
+        null, 2
+      )
       await upsertFile(
         octokit, owner, repo, path,
         fileContent,
