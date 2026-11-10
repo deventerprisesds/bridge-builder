@@ -5,7 +5,8 @@
   "scripts": {
     "build": "tsc",
     "start": "func start",
-    "watch": "tsc --watch"
+    "watch": "tsc --watch",
+    "test": "node --experimental-strip-types --test --test-reporter=tap \"test/*.test.ts\""
   },
   "dependencies": {
     "@azure/data-tables": "^13.2.2",
